@@ -81,6 +81,7 @@ def init_db():
             ("source", "TEXT"),
             ("created_at", "TEXT"),
             ("updated_at", "TEXT"),
+            ("priority", "TEXT"),
         ]:
             if col not in existing:
                 conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} {ddl}")
@@ -118,11 +119,21 @@ def load_portfolio():
 
 def load_signals_snapshot():
     if not SIGNALS_PATH.exists():
-        return {"generated_at": None, "macro": [], "market": [], "news": []}
+        return {"generated_at": None, "macro": [], "market": [], "news": [], "freshness_min": None}
     try:
-        return json.loads(SIGNALS_PATH.read_text(encoding="utf-8"))
+        data = json.loads(SIGNALS_PATH.read_text(encoding="utf-8"))
+        gen = data.get("generated_at")
+        freshness = None
+        if gen:
+            try:
+                dt = datetime.fromisoformat(gen.replace("Z", "+00:00"))
+                freshness = int((datetime.now(UTC) - dt).total_seconds() // 60)
+            except Exception:
+                freshness = None
+        data["freshness_min"] = freshness
+        return data
     except Exception:
-        return {"generated_at": None, "macro": [], "market": [], "news": []}
+        return {"generated_at": None, "macro": [], "market": [], "news": [], "freshness_min": None}
 
 
 def latest_commits(limit: int = 6):
@@ -157,7 +168,7 @@ def api_summary():
         "FROM token_usage GROUP BY model ORDER BY total DESC"
     )
     recent_tasks = q(
-        "SELECT task_id, status, assigned_by, assigned_to, title, details, updated_at "
+        "SELECT task_id, status, assigned_by, assigned_to, title, details, priority, updated_at "
         "FROM tasks ORDER BY updated_at DESC LIMIT 20"
     )
     cron_rows = q(
@@ -177,8 +188,16 @@ def api_summary():
 
 
 @app.post("/tasks/create")
-def create_task(title: str = Form(...), assigned_to: str = Form("alpha-scout"), conviction: int = Form(3)):
+def create_task(
+    title: str = Form(...),
+    assigned_to: str = Form("alpha-scout"),
+    conviction: int = Form(3),
+    priority: str = Form("media"),
+):
     conviction = max(1, min(5, conviction))
+    priority = (priority or "media").lower()
+    if priority not in {"alta", "media", "baja"}:
+        priority = "media"
     details = f"[conviction:{conviction}] creada desde dashboard"
     fp = fingerprint(title, details)
     conn = sqlite3.connect(DB_PATH)
@@ -192,9 +211,9 @@ def create_task(title: str = Form(...), assigned_to: str = Form("alpha-scout"), 
             task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
             ts = now_iso()
             cur.execute(
-                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?)",
-                (task_id, title, details, "fernando", assigned_to, "pending", fp, "dashboard", ts, ts),
+                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, title, details, "fernando", assigned_to, "pending", fp, "dashboard", ts, ts, priority),
             )
             conn.commit()
     finally:

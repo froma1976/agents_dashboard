@@ -51,6 +51,7 @@
       <div class="right">
         <div class="pill"><span class="dot"></span>online</div>
         <div class="pill">auto-refresh: 10s</div>
+        <div class="pill">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
           <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
         </form>
@@ -145,7 +146,7 @@
 
       <div class="card col-12">
         <h2>Crear tarea manual (con convicción 1-5)</h2>
-        <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 120px;gap:8px;align-items:end">
+        <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
             <label class="muted">Título</label>
             <input name="title" required style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" placeholder="Ej: Vigilar ruptura de NVDA con volumen" />
@@ -158,6 +159,14 @@
             <label class="muted">Convicción</label>
             <input name="conviction" type="number" min="1" max="5" value="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           </div>
+          <div>
+            <label class="muted">Prioridad</label>
+            <select name="priority" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff">
+              <option value="alta">alta</option>
+              <option value="media" selected>media</option>
+              <option value="baja">baja</option>
+            </select>
+          </div>
           <button type="submit" style="padding:10px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer">Añadir</button>
         </form>
       </div>
@@ -165,7 +174,7 @@
       <div class="card col-12">
         <h2>Últimas tareas</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th><th>Acciones</th></tr>
+          <tr><th>ID</th><th>Estado</th><th>Prioridad</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th><th>Acciones</th></tr>
           {% for r in recent_tasks %}
             {% set conv = '-' %}
             {% if r.details and '[conviction:' in r.details %}
@@ -174,6 +183,7 @@
             <tr>
               <td>{{ r.task_id }}</td>
               <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+              <td>{{ r.priority or 'media' }}</td>
               <td>{{ r.assigned_by }}</td>
               <td>{{ r.assigned_to }}</td>
               <td>{{ r.title }}</td>
@@ -189,7 +199,7 @@
               </td>
             </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="8">Sin datos</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="9">Sin datos</td></tr>{% endif %}
         </table>
       </div>
 
