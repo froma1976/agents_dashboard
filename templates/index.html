@@ -146,6 +146,12 @@
 
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
+        <form method="post" action="/signals/autotasks" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <label class="muted">Crear tareas automáticas con score ≥</label>
+          <input name="threshold" type="number" min="0" max="100" value="60" style="width:90px;padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+          <input name="assigned_to" value="alpha-scout" style="padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Auto-crear tareas</button>
+        </form>
         <table>
           <tr><th>Ticker</th><th>Score</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}

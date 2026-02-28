@@ -249,6 +249,42 @@ def refresh_signals():
     return RedirectResponse(url="/", status_code=303)
 
 
+@app.post("/signals/autotasks")
+def create_tasks_from_top(threshold: int = Form(60), assigned_to: str = Form("alpha-scout")):
+    signals = load_signals_snapshot()
+    top = signals.get("top_opportunities", []) if isinstance(signals, dict) else []
+    conn = sqlite3.connect(DB_PATH)
+    created = 0
+    try:
+        cur = conn.cursor()
+        for o in top:
+            score = int(o.get("score", 0) or 0)
+            if score < threshold:
+                continue
+            ticker = o.get("ticker", "N/A")
+            title = f"Analizar oportunidad {ticker} (score {score})"
+            details = f"[conviction:4] auto desde top_opportunities score>={threshold}"
+            fp = fingerprint(title, details)
+            row = cur.execute(
+                "SELECT task_id FROM tasks WHERE fingerprint=? AND status IN ('pending','running')",
+                (fp,),
+            ).fetchone()
+            if row:
+                continue
+            task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
+            ts = now_iso()
+            cur.execute(
+                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, title, details, "fernando", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta"),
+            )
+            created += 1
+        conn.commit()
+    finally:
+        conn.close()
+    return RedirectResponse(url=f"/?created={created}", status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     data = api_summary()
