@@ -3,6 +3,7 @@ import os
 import sqlite3
 import json
 import hashlib
+import subprocess
 from datetime import datetime, UTC
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -11,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "agent_activity_registry.db")))
 PORTFOLIO_PATH = Path(os.getenv("PORTFOLIO_PATH", str(BASE_DIR / "portfolio_usd_sample.json")))
+SIGNALS_PATH = Path(os.getenv("SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
+INGEST_SCRIPT = Path(os.getenv("INGEST_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/source_ingest_free.py"))
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -113,6 +116,33 @@ def load_portfolio():
         return {"capital_initial_usd": 1000, "cash_usd": 1000, "positions": [], "rules": {}}
 
 
+def load_signals_snapshot():
+    if not SIGNALS_PATH.exists():
+        return {"generated_at": None, "macro": [], "market": [], "news": []}
+    try:
+        return json.loads(SIGNALS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"generated_at": None, "macro": [], "market": [], "news": []}
+
+
+def latest_commits(limit: int = 6):
+    try:
+        out = subprocess.check_output(
+            ["git", "log", f"-n{limit}", "--pretty=format:%h|%ad|%s", "--date=short"],
+            cwd=str(BASE_DIR),
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+        rows = []
+        for line in out.splitlines():
+            parts = line.split("|", 2)
+            if len(parts) == 3:
+                rows.append({"hash": parts[0], "date": parts[1], "msg": parts[2]})
+        return rows
+    except Exception:
+        return []
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "db_path": str(DB_PATH), "exists": DB_PATH.exists()}
@@ -190,6 +220,16 @@ def update_task_status(task_id: str = Form(...), status: str = Form(...)):
     return RedirectResponse(url="/", status_code=303)
 
 
+@app.post("/signals/refresh")
+def refresh_signals():
+    if INGEST_SCRIPT.exists():
+        try:
+            subprocess.run(["py", "-3", str(INGEST_SCRIPT)], check=False, timeout=120)
+        except Exception:
+            pass
+    return RedirectResponse(url="/", status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     data = api_summary()
@@ -198,6 +238,8 @@ def home(request: Request):
     cash_usd = float(portfolio.get("cash_usd", 0))
     market_value = sum(float(p.get("notional_usd", 0)) for p in positions if p.get("status") == "active")
     equity = cash_usd + market_value
+    signals = load_signals_snapshot()
+    commits = latest_commits()
 
     return templates.TemplateResponse(
         "index.html",
@@ -212,5 +254,7 @@ def home(request: Request):
             "portfolio_cash_usd": cash_usd,
             "portfolio_market_value_usd": market_value,
             "portfolio_equity_usd": equity,
+            "signals": signals,
+            "commits": commits,
         },
     )

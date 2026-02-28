@@ -51,6 +51,9 @@
       <div class="right">
         <div class="pill"><span class="dot"></span>online</div>
         <div class="pill">auto-refresh: 10s</div>
+        <form method="post" action="/signals/refresh" style="margin:0">
+          <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
+        </form>
       </div>
     </div>
 
@@ -91,6 +94,53 @@
           {% endfor %}
           {% if token_by_model|length == 0 %}<tr><td colspan="4">Sin datos</td></tr>{% endif %}
         </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Historial de commits (últimos cambios)</h2>
+        <table>
+          <tr><th>Commit</th><th>Fecha</th><th>Mensaje</th></tr>
+          {% for c in commits %}
+            <tr><td><code>{{ c.hash }}</code></td><td>{{ c.date }}</td><td>{{ c.msg }}</td></tr>
+          {% endfor %}
+          {% if commits|length == 0 %}<tr><td colspan="3">Sin datos de git</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Señales gratis (snapshot)</h2>
+        <div class="muted" style="margin-bottom:8px">Generado: {{ signals.generated_at or 'N/D' }}</div>
+        <div class="grid" style="grid-template-columns: repeat(12,1fr); gap:10px;">
+          <div class="col-4" style="grid-column: span 4;">
+            <h2>Macro (FRED)</h2>
+            <table>
+              <tr><th>Serie</th><th>Último</th><th>Fecha</th></tr>
+              {% for m in signals.macro[:6] %}
+                <tr><td>{{ m.series }}</td><td>{{ m.latest_value or '-' }}</td><td>{{ m.latest_date or '-' }}</td></tr>
+              {% endfor %}
+            </table>
+          </div>
+          <div class="col-4" style="grid-column: span 4;">
+            <h2>Market (Yahoo)</h2>
+            <table>
+              <tr><th>Ticker</th><th>Precio</th><th>Exch</th></tr>
+              {% for s in signals.market[:8] %}
+                <tr><td>{{ s.ticker }}</td><td>{{ s.regularMarketPrice or '-' }}</td><td>{{ s.exchange or '-' }}</td></tr>
+              {% endfor %}
+            </table>
+          </div>
+          <div class="col-4" style="grid-column: span 4;">
+            <h2>News (RSS)</h2>
+            <table>
+              <tr><th>Titular</th></tr>
+              {% for feed in signals.news[:4] %}
+                {% for item in feed['items'][:2] %}
+                  <tr><td><a href="{{ item.link }}" target="_blank" style="color:#9ec5ff">{{ item.title }}</a></td></tr>
+                {% endfor %}
+              {% endfor %}
+            </table>
+          </div>
+        </div>
       </div>
 
       <div class="card col-12">
