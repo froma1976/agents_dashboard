@@ -183,18 +183,21 @@
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
-          <tr><th>Ticker</th><th>Score</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          <tr><th>Ticker</th><th>Score Final</th><th>Tech</th><th>MacroAdj</th><th>Social</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
             <tr>
               <td>{{ o.ticker }}</td>
-              <td><strong>{{ o.score }}</strong></td>
+              <td><strong>{{ o.score_final if o.score_final is not none else o.score }}</strong></td>
+              <td>{{ o.score_tech if o.score_tech is not none else '-' }}</td>
+              <td>{{ o.score_macro_adj if o.score_macro_adj is not none else '-' }}</td>
+              <td>{{ o.score_social if o.score_social is not none else '-' }}</td>
               <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
               <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
               <td>{{ (o.reasons or [])|join(', ') }}</td>
               <td>
                 <form method="post" action="/tasks/create" style="display:flex;gap:6px;align-items:center">
-                  <input type="hidden" name="title" value="Analizar oportunidad {{ o.ticker }} (score {{ o.score }})" />
+                  <input type="hidden" name="title" value="Analizar oportunidad {{ o.ticker }} (score {{ o.score_final if o.score_final is not none else o.score }})" />
                   <input type="hidden" name="assigned_to" value="alpha-scout" />
                   <input type="hidden" name="conviction" value="4" />
                   <input type="hidden" name="priority" value="alta" />
@@ -204,7 +207,7 @@
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="6">Sin oportunidades calculadas todavía</td></tr>
+            <tr><td colspan="9">Sin oportunidades calculadas todavía</td></tr>
           {% endif %}
         </table>
       </div>
