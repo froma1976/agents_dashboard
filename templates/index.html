@@ -135,7 +135,7 @@
               <tr><th>Titular</th></tr>
               {% for feed in signals.news[:4] %}
                 {% for item in feed['items'][:2] %}
-                  <tr><td><a href="{{ item.link }}" target="_blank" style="color:#9ec5ff">{{ item.title }}</a></td></tr>
+                  <tr><td><a href="{{ item.link }}" target="_blank" style="color:#9ec5ff">{{ item.title_es or item.title }}</a></td></tr>
                 {% endfor %}
               {% endfor %}
             </table>
