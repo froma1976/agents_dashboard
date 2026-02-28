@@ -141,6 +141,25 @@
               {% endfor %}
             </table>
           </div>
+
+          <div class="col-12" style="grid-column: span 12;">
+            <h2>Señal social web (Stocktwits)</h2>
+            <table>
+              <tr><th>Symbol</th><th>Mensajes</th><th>Bullish</th><th>Bearish</th><th>Score Sentimiento</th></tr>
+              {% for s in signals.social[:8] %}
+                <tr>
+                  <td>{{ s.symbol }}</td>
+                  <td>{{ s.messages_checked or '-' }}</td>
+                  <td>{{ s.bullish or 0 }}</td>
+                  <td>{{ s.bearish or 0 }}</td>
+                  <td>{{ s.sentiment_score if s.sentiment_score is not none else '-' }}</td>
+                </tr>
+              {% endfor %}
+              {% if signals.social is not defined or signals.social|length == 0 %}
+                <tr><td colspan="5">Sin datos sociales</td></tr>
+              {% endif %}
+            </table>
+          </div>
         </div>
       </div>
 
