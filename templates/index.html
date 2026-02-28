@@ -66,6 +66,11 @@
       <div class="card col-3 kpi"><div class="l">Tokens acumulados</div><div class="v">{{ total_tokens }}</div></div>
       <div class="card col-3 kpi"><div class="l">Cron registradas</div><div class="v">{{ cron_rows|length }}</div></div>
 
+      <div class="card col-3 kpi"><div class="l">Equity (USD)</div><div class="v">{{ '%.2f'|format(portfolio_equity_usd) }}</div></div>
+      <div class="card col-3 kpi"><div class="l">Cash (USD)</div><div class="v">{{ '%.2f'|format(portfolio_cash_usd) }}</div></div>
+      <div class="card col-3 kpi"><div class="l">Market Value</div><div class="v">{{ '%.2f'|format(portfolio_market_value_usd) }}</div></div>
+      <div class="card col-3 kpi"><div class="l">Posiciones</div><div class="v">{{ portfolio_positions|length }}</div></div>
+
       <div class="card col-4">
         <h2>Tareas por estado</h2>
         <table>
@@ -89,20 +94,44 @@
       </div>
 
       <div class="card col-12">
+        <h2>Crear tarea manual (con convicción 1-5)</h2>
+        <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 120px;gap:8px;align-items:end">
+          <div>
+            <label class="muted">Título</label>
+            <input name="title" required style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" placeholder="Ej: Vigilar ruptura de NVDA con volumen" />
+          </div>
+          <div>
+            <label class="muted">Agente</label>
+            <input name="assigned_to" value="alpha-scout" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+          </div>
+          <div>
+            <label class="muted">Convicción</label>
+            <input name="conviction" type="number" min="1" max="5" value="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+          </div>
+          <button type="submit" style="padding:10px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer">Añadir</button>
+        </form>
+      </div>
+
+      <div class="card col-12">
         <h2>Últimas tareas</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Actualizado</th></tr>
+          <tr><th>ID</th><th>Estado</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th></tr>
           {% for r in recent_tasks %}
+            {% set conv = '-' %}
+            {% if r.details and '[conviction:' in r.details %}
+              {% set conv = r.details.split('[conviction:')[1].split(']')[0] %}
+            {% endif %}
             <tr>
               <td>{{ r.task_id }}</td>
               <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
               <td>{{ r.assigned_by }}</td>
               <td>{{ r.assigned_to }}</td>
               <td>{{ r.title }}</td>
+              <td>{{ conv }}</td>
               <td>{{ r.updated_at }}</td>
             </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="6">Sin datos</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="7">Sin datos</td></tr>{% endif %}
         </table>
       </div>
 

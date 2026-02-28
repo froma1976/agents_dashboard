@@ -1,0 +1,10 @@
+{
+  "capital_initial_usd": 1000,
+  "cash_usd": 1000,
+  "positions": [],
+  "rules": {
+    "max_risk_per_trade_pct": 1.0,
+    "max_total_exposure_pct": 70.0,
+    "currency": "USD"
+  }
+}
