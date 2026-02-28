@@ -145,6 +145,35 @@
       </div>
 
       <div class="card col-12">
+        <h2>Top oportunidades (score MVP)</h2>
+        <table>
+          <tr><th>Ticker</th><th>Score</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
+          {% for o in top_ops[:5] %}
+            <tr>
+              <td>{{ o.ticker }}</td>
+              <td><strong>{{ o.score }}</strong></td>
+              <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
+              <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
+              <td>{{ (o.reasons or [])|join(', ') }}</td>
+              <td>
+                <form method="post" action="/tasks/create" style="display:flex;gap:6px;align-items:center">
+                  <input type="hidden" name="title" value="Analizar oportunidad {{ o.ticker }} (score {{ o.score }})" />
+                  <input type="hidden" name="assigned_to" value="alpha-scout" />
+                  <input type="hidden" name="conviction" value="4" />
+                  <input type="hidden" name="priority" value="alta" />
+                  <button type="submit" style="padding:4px 8px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Crear tarea</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          {% if top_ops|length == 0 %}
+            <tr><td colspan="6">Sin oportunidades calculadas todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Crear tarea manual (con convicción 1-5)</h2>
         <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
