@@ -295,6 +295,8 @@ def home(request: Request):
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
     commits = latest_commits()
+    freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
+    stale = (freshness is None) or (freshness > 20)
 
     return templates.TemplateResponse(
         "index.html",
@@ -311,5 +313,6 @@ def home(request: Request):
             "portfolio_equity_usd": equity,
             "signals": signals,
             "commits": commits,
+            "signals_stale": stale,
         },
     )
