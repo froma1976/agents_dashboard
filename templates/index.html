@@ -183,7 +183,7 @@
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
-          <tr><th>Ticker</th><th>Score Final</th><th>Tech</th><th>MacroAdj</th><th>Social</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          <tr><th>Ticker</th><th>Score Final</th><th>Tech</th><th>MacroAdj</th><th>Social</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
             <tr>
@@ -192,6 +192,9 @@
               <td>{{ o.score_tech if o.score_tech is not none else '-' }}</td>
               <td>{{ o.score_macro_adj if o.score_macro_adj is not none else '-' }}</td>
               <td>{{ o.score_social if o.score_social is not none else '-' }}</td>
+              <td>{{ o.rsi14 if o.rsi14 is not none else '-' }}</td>
+              <td>{{ o.ema20 if o.ema20 is not none else '-' }}</td>
+              <td>{{ o.ema50 if o.ema50 is not none else '-' }}</td>
               <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
               <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
               <td>{{ (o.reasons or [])|join(', ') }}</td>
@@ -207,7 +210,7 @@
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="9">Sin oportunidades calculadas todavía</td></tr>
+            <tr><td colspan="12">Sin oportunidades calculadas todavía</td></tr>
           {% endif %}
         </table>
       </div>
