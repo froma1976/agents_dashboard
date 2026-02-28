@@ -115,7 +115,7 @@
       <div class="card col-12">
         <h2>Últimas tareas</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th></tr>
+          <tr><th>ID</th><th>Estado</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th><th>Acciones</th></tr>
           {% for r in recent_tasks %}
             {% set conv = '-' %}
             {% if r.details and '[conviction:' in r.details %}
@@ -129,9 +129,17 @@
               <td>{{ r.title }}</td>
               <td>{{ conv }}</td>
               <td>{{ r.updated_at }}</td>
+              <td>
+                <form method="post" action="/tasks/status" style="display:flex;gap:6px;flex-wrap:wrap">
+                  <input type="hidden" name="task_id" value="{{ r.task_id }}" />
+                  <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Running</button>
+                  <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Done</button>
+                  <button name="status" value="blocked" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#4b1f1f;color:#ffb4b4;cursor:pointer">Blocked</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="7">Sin datos</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="8">Sin datos</td></tr>{% endif %}
         </table>
       </div>
 

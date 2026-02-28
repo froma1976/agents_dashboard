@@ -172,6 +172,24 @@ def create_task(title: str = Form(...), assigned_to: str = Form("alpha-scout"), 
     return RedirectResponse(url="/", status_code=303)
 
 
+@app.post("/tasks/status")
+def update_task_status(task_id: str = Form(...), status: str = Form(...)):
+    allowed = {"pending", "running", "done", "blocked", "cancelled"}
+    if status not in allowed:
+        return RedirectResponse(url="/", status_code=303)
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            "UPDATE tasks SET status=?, updated_at=? WHERE task_id=?",
+            (status, now_iso(), task_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return RedirectResponse(url="/", status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     data = api_summary()
