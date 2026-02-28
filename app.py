@@ -14,6 +14,8 @@ DB_PATH = Path(os.getenv("DB_PATH", str(BASE_DIR / "agent_activity_registry.db")
 PORTFOLIO_PATH = Path(os.getenv("PORTFOLIO_PATH", str(BASE_DIR / "portfolio_usd_sample.json")))
 SIGNALS_PATH = Path(os.getenv("SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 INGEST_SCRIPT = Path(os.getenv("INGEST_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/source_ingest_free.py"))
+CARDS_SCRIPT = Path(os.getenv("CARDS_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/generate_claw_cards_mvp.py"))
+AUTOPILOT_LOG = Path(os.getenv("AUTOPILOT_LOG", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/autopilot_log.json"))
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -134,6 +136,32 @@ def load_signals_snapshot():
         return data
     except Exception:
         return {"generated_at": None, "macro": [], "market": [], "news": [], "freshness_min": None}
+
+
+def load_autopilot_log(limit: int = 15):
+    if not AUTOPILOT_LOG.exists():
+        return []
+    try:
+        data = json.loads(AUTOPILOT_LOG.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            return data[-limit:][::-1]
+        return []
+    except Exception:
+        return []
+
+
+def save_autopilot_entry(entry: dict):
+    AUTOPILOT_LOG.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    if AUTOPILOT_LOG.exists():
+        try:
+            rows = json.loads(AUTOPILOT_LOG.read_text(encoding="utf-8"))
+            if not isinstance(rows, list):
+                rows = []
+        except Exception:
+            rows = []
+    rows.append(entry)
+    AUTOPILOT_LOG.write_text(json.dumps(rows[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def latest_commits(limit: int = 6):
@@ -285,6 +313,63 @@ def create_tasks_from_top(threshold: int = Form(60), assigned_to: str = Form("al
     return RedirectResponse(url=f"/?created={created}", status_code=303)
 
 
+@app.post("/autopilot/run")
+def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scout")):
+    threshold = max(0, min(100, threshold))
+
+    if INGEST_SCRIPT.exists():
+        try:
+            subprocess.run(["py", "-3", str(INGEST_SCRIPT)], check=False, timeout=180)
+        except Exception:
+            pass
+    if CARDS_SCRIPT.exists():
+        try:
+            subprocess.run(["py", "-3", str(CARDS_SCRIPT)], check=False, timeout=120)
+        except Exception:
+            pass
+
+    signals = load_signals_snapshot()
+    top = signals.get("top_opportunities", []) if isinstance(signals, dict) else []
+    created = 0
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        for o in top:
+            score = int(o.get("score", 0) or 0)
+            if score < threshold:
+                continue
+            ticker = o.get("ticker", "N/A")
+            title = f"[AUTO] Ejecutar plan {ticker} (score {score})"
+            details = f"[conviction:4] auto-autopilot score>={threshold} reasons={','.join(o.get('reasons', []))}"
+            fp = fingerprint(title, details)
+            row = cur.execute(
+                "SELECT task_id FROM tasks WHERE fingerprint=? AND status IN ('pending','running')",
+                (fp,),
+            ).fetchone()
+            if row:
+                continue
+            task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
+            ts = now_iso()
+            cur.execute(
+                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, title, details, "autopilot", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta"),
+            )
+            created += 1
+        conn.commit()
+    finally:
+        conn.close()
+
+    save_autopilot_entry({
+        "ts": now_iso(),
+        "threshold": threshold,
+        "assigned_to": assigned_to,
+        "created_tasks": created,
+        "top_count": len(top),
+    })
+    return RedirectResponse(url=f"/?autopilot_created={created}", status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     data = api_summary()
@@ -295,6 +380,7 @@ def home(request: Request):
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
     commits = latest_commits()
+    autopilot_log = load_autopilot_log()
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
 
@@ -314,5 +400,6 @@ def home(request: Request):
             "signals": signals,
             "commits": commits,
             "signals_stale": stale,
+            "autopilot_log": autopilot_log,
         },
     )

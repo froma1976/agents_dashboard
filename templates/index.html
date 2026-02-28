@@ -145,13 +145,24 @@
       </div>
 
       <div class="card col-12">
-        <h2>Top oportunidades (score MVP)</h2>
-        <form method="post" action="/signals/autotasks" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-          <label class="muted">Crear tareas automáticas con score ≥</label>
+        <h2>Autopilot del agente (detección → tarea automática)</h2>
+        <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <label class="muted">Ejecutar autopilot con score ≥</label>
           <input name="threshold" type="number" min="0" max="100" value="60" style="width:90px;padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           <input name="assigned_to" value="alpha-scout" style="padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
-          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Auto-crear tareas</button>
+          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Run Autopilot</button>
         </form>
+        <table>
+          <tr><th>Hora</th><th>Threshold</th><th>Agente</th><th>Top vistos</th><th>Tareas creadas</th></tr>
+          {% for a in autopilot_log[:8] %}
+            <tr><td>{{ a.ts }}</td><td>{{ a.threshold }}</td><td>{{ a.assigned_to }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td></tr>
+          {% endfor %}
+          {% if autopilot_log|length == 0 %}<tr><td colspan="5">Sin ejecuciones todavía</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Top oportunidades (score MVP)</h2>
         <table>
           <tr><th>Ticker</th><th>Score</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
@@ -180,7 +191,7 @@
       </div>
 
       <div class="card col-12">
-        <h2>Crear tarea manual (con convicción 1-5)</h2>
+        <h2>Override manual (solo si quieres forzar una tarea)</h2>
         <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
             <label class="muted">Título</label>
