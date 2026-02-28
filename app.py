@@ -6,7 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = Path("C:/Users/Fernando/.openclaw/workspace/agent_activity_registry.db")
+import os
+DB_PATH = os.getenv("DB_PATH", "agent_activity_registry.db")
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
