@@ -594,10 +594,23 @@ def home(request: Request):
             ).fetchone()
             if row:
                 st = row["status"]
-                st_es = "en curso" if st == "running" else ("pendiente" if st == "pending" else ("hecha" if st == "done" else ("bloqueada" if st == "blocked" else st)))
-                text = f"{aid}: ahora está {st_es} con '{row['title']}' (actualizado {row['updated_at']})"
+                st_es = "trabajando" if st == "running" else ("en espera" if st == "pending" else ("terminado" if st == "done" else ("bloqueado" if st == "blocked" else st)))
+                title = (row["title"] or "").lower()
+
+                if "qqq" in title:
+                    tarea_humana = "analizando el ETF tecnológico principal de EE.UU."
+                elif "nvda" in title:
+                    tarea_humana = "analizando NVIDIA por posible oportunidad"
+                elif "msft" in title:
+                    tarea_humana = "analizando Microsoft por posible oportunidad"
+                elif "executar plan" in title or "ejecutar plan" in title or "[auto]" in title:
+                    tarea_humana = "evaluando si conviene abrir una operación simulada"
+                else:
+                    tarea_humana = "revisando señales del mercado"
+
+                text = f"{aid}: {st_es}; {tarea_humana}. Última actualización: {row['updated_at']}"
             else:
-                text = f"{aid}: sin tarea reciente, en espera de señales nuevas"
+                text = f"{aid}: en espera de nuevas señales del mercado"
             agent_live.append({"agent": aid, "text": text})
         conn.close()
     except Exception:
