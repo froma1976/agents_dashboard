@@ -17,6 +17,7 @@ INGEST_SCRIPT = Path(os.getenv("INGEST_SCRIPT", "C:/Users/Fernando/.openclaw/wor
 CARDS_SCRIPT = Path(os.getenv("CARDS_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/generate_claw_cards_mvp.py"))
 AUTOPILOT_LOG = Path(os.getenv("AUTOPILOT_LOG", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/autopilot_log.json"))
 AGENTS_RUNTIME = Path(os.getenv("AGENTS_RUNTIME", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/AGENTS_RUNTIME_LOCAL.json"))
+AGENTS_HEALTH = Path(os.getenv("AGENTS_HEALTH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/multiagent_health.json"))
 ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/orders_sim.json"))
 
 app = FastAPI(title="Agent Ops Dashboard")
@@ -162,6 +163,18 @@ def load_orders():
         return {"pending": [], "completed": []}
 
 
+def load_agents_health():
+    if not AGENTS_HEALTH.exists():
+        return []
+    try:
+        data = json.loads(AGENTS_HEALTH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return data.get("results", [])
+        return []
+    except Exception:
+        return []
+
+
 def load_autopilot_log(limit: int = 15):
     if not AUTOPILOT_LOG.exists():
         return []
@@ -242,6 +255,10 @@ def api_summary():
         "SELECT task_id, status, assigned_by, assigned_to, title, details, priority, updated_at "
         "FROM tasks ORDER BY updated_at DESC LIMIT 20"
     )
+    token_by_actor = q(
+        "SELECT COALESCE(recorded_by,'-') actor, SUM(tokens_in) tin, SUM(tokens_out) tout, SUM(tokens_in+tokens_out) total "
+        "FROM token_usage GROUP BY actor ORDER BY total DESC"
+    )
     cron_rows = q(
         "SELECT name, cron_expr, active, COALESCE(owner_user_id, '-') owner_user_id, "
         "COALESCE(task_ref, '-') task_ref, updated_at "
@@ -254,6 +271,7 @@ def api_summary():
         "token_by_model": [dict(r) for r in token_by_model],
         "recent_tasks": [dict(r) for r in recent_tasks],
         "cron_rows": [dict(r) for r in cron_rows],
+        "token_by_actor": [dict(r) for r in token_by_actor],
         "portfolio": portfolio,
     }
 
@@ -431,6 +449,7 @@ def home(request: Request):
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
     agents_runtime = load_agents_runtime()
+    agents_health = load_agents_health()
     orders = load_orders()
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
@@ -441,6 +460,7 @@ def home(request: Request):
             "request": request,
             "task_counts": data["task_counts"],
             "token_by_model": data["token_by_model"],
+            "token_by_actor": data.get("token_by_actor", []),
             "recent_tasks": data["recent_tasks"],
             "cron_rows": data["cron_rows"],
             "portfolio": portfolio,
@@ -453,6 +473,7 @@ def home(request: Request):
             "signals_stale": stale,
             "autopilot_log": autopilot_log,
             "agents_runtime": agents_runtime,
+            "agents_health": agents_health,
             "orders_pending": orders.get("pending", []),
             "orders_completed": orders.get("completed", []),
         },

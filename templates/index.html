@@ -284,6 +284,34 @@
       </div>
 
       <div class="card col-12">
+        <h2>Salud de agentes LLM (local)</h2>
+        <table>
+          <tr><th>Agente</th><th>Modelo</th><th>Estado</th><th>Latencia (s)</th><th>Detalle</th></tr>
+          {% for h in agents_health %}
+            <tr>
+              <td>{{ h.agent }}</td>
+              <td>{{ h.model }}</td>
+              <td>{{ 'OK' if h.ok else 'ERROR' }}</td>
+              <td>{{ h.latency_s }}</td>
+              <td>{{ h.note }}</td>
+            </tr>
+          {% endfor %}
+          {% if agents_health|length == 0 %}<tr><td colspan="5">Sin datos de health check</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Tokens por agente/proceso</h2>
+        <table>
+          <tr><th>Actor</th><th>Tokens in</th><th>Tokens out</th><th>Total</th></tr>
+          {% for t in token_by_actor %}
+            <tr><td>{{ t.actor }}</td><td>{{ t.tin or 0 }}</td><td>{{ t.tout or 0 }}</td><td>{{ t.total or 0 }}</td></tr>
+          {% endfor %}
+          {% if token_by_actor|length == 0 %}<tr><td colspan="4">Sin datos de tokens por agente todavía</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Piloto automático</h2>
         <p class="muted">Funciona solo por cron. El botón es solo de prueba/manual.</p>
         <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
