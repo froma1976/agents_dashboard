@@ -16,6 +16,8 @@ SIGNALS_PATH = Path(os.getenv("SIGNALS_PATH", "C:/Users/Fernando/.openclaw/works
 INGEST_SCRIPT = Path(os.getenv("INGEST_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/source_ingest_free.py"))
 CARDS_SCRIPT = Path(os.getenv("CARDS_SCRIPT", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/scripts/generate_claw_cards_mvp.py"))
 AUTOPILOT_LOG = Path(os.getenv("AUTOPILOT_LOG", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/autopilot_log.json"))
+AGENTS_RUNTIME = Path(os.getenv("AGENTS_RUNTIME", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/AGENTS_RUNTIME_LOCAL.json"))
+ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/orders_sim.json"))
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -138,6 +140,28 @@ def load_signals_snapshot():
         return {"generated_at": None, "macro": [], "market": [], "news": [], "freshness_min": None}
 
 
+def load_agents_runtime():
+    if not AGENTS_RUNTIME.exists():
+        return []
+    try:
+        data = json.loads(AGENTS_RUNTIME.read_text(encoding="utf-8"))
+        return data.get("agents", []) if isinstance(data, dict) else []
+    except Exception:
+        return []
+
+
+def load_orders():
+    if not ORDERS_PATH.exists():
+        return {"pending": [], "completed": []}
+    try:
+        data = json.loads(ORDERS_PATH.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {"pending": [], "completed": []}
+        return {"pending": data.get("pending", []), "completed": data.get("completed", [])}
+    except Exception:
+        return {"pending": [], "completed": []}
+
+
 def load_autopilot_log(limit: int = 15):
     if not AUTOPILOT_LOG.exists():
         return []
@@ -162,6 +186,25 @@ def save_autopilot_entry(entry: dict):
             rows = []
     rows.append(entry)
     AUTOPILOT_LOG.write_text(json.dumps(rows[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def upsert_order_pending(ticker: str, score: int, state: str):
+    ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    orders = load_orders()
+    pending = orders.get("pending", [])
+    if any(o.get("ticker") == ticker and o.get("status") == "pending" for o in pending):
+        return False
+    pending.append({
+        "id": f"ord_{hashlib.sha1((ticker + now_iso()).encode()).hexdigest()[:10]}",
+        "ticker": ticker,
+        "status": "pending",
+        "state": state,
+        "score": score,
+        "created_at": now_iso(),
+    })
+    orders["pending"] = pending
+    ORDERS_PATH.write_text(json.dumps(orders, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
 
 
 def latest_commits(limit: int = 6):
@@ -331,6 +374,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
     signals = load_signals_snapshot()
     top = signals.get("top_opportunities", []) if isinstance(signals, dict) else []
     created = 0
+    orders_created = 0
     conn = sqlite3.connect(DB_PATH)
     try:
         cur = conn.cursor()
@@ -338,6 +382,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
             score = int(o.get("score", 0) or 0)
             if score < threshold:
                 continue
+            state = str(o.get("state", "WATCH"))
             ticker = o.get("ticker", "N/A")
             title = f"[AUTO] Ejecutar plan {ticker} (score {score})"
             details = f"[conviction:4] auto-autopilot score>={threshold} reasons={','.join(o.get('reasons', []))}"
@@ -356,6 +401,9 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
                 (task_id, title, details, "autopilot", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta"),
             )
             created += 1
+            if state in {"READY", "TRIGGERED"}:
+                if upsert_order_pending(ticker, score, state):
+                    orders_created += 1
         conn.commit()
     finally:
         conn.close()
@@ -365,6 +413,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
         "threshold": threshold,
         "assigned_to": assigned_to,
         "created_tasks": created,
+        "created_orders": orders_created,
         "top_count": len(top),
     })
     return RedirectResponse(url=f"/?autopilot_created={created}", status_code=303)
@@ -381,6 +430,8 @@ def home(request: Request):
     signals = load_signals_snapshot()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
+    agents_runtime = load_agents_runtime()
+    orders = load_orders()
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
 
@@ -401,5 +452,8 @@ def home(request: Request):
             "commits": commits,
             "signals_stale": stale,
             "autopilot_log": autopilot_log,
+            "agents_runtime": agents_runtime,
+            "orders_pending": orders.get("pending", []),
+            "orders_completed": orders.get("completed", []),
         },
     )

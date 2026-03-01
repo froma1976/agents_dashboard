@@ -75,7 +75,7 @@
       <button class="tab-btn" data-tab-btn="cartera">Cartera</button>
       <button class="tab-btn" data-tab-btn="agentes">Agentes</button>
       <button class="tab-btn" data-tab-btn="fuentes">Fuentes</button>
-      <button class="tab-btn" data-tab-btn="tecnico">Técnico</button>
+      <button class="tab-btn" data-tab-btn="tecnico">Avanzado</button>
     </div>
 
     <div class="grid tab-section active" data-tab="inicio">
@@ -169,6 +169,28 @@
           </tr>
         </table>
       </div>
+
+      <div class="card col-12">
+        <h2>Órdenes pendientes</h2>
+        <table>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th></tr>
+          {% for o in orders_pending %}
+            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state }}</td><td>{{ o.score }}</td><td>{{ o.created_at }}</td></tr>
+          {% endfor %}
+          {% if orders_pending|length == 0 %}<tr><td colspan="5">Sin órdenes pendientes</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Órdenes completadas</h2>
+        <table>
+          <tr><th>ID</th><th>Ticker</th><th>Resultado</th><th>Cerrada</th></tr>
+          {% for o in orders_completed %}
+            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.result or '-' }}</td><td>{{ o.closed_at or '-' }}</td></tr>
+          {% endfor %}
+          {% if orders_completed|length == 0 %}<tr><td colspan="4">Sin órdenes completadas</td></tr>{% endif %}
+        </table>
+      </div>
     </div>
 
     <div class="grid tab-section" data-tab="fuentes">
@@ -250,19 +272,32 @@
 
     <div class="grid tab-section" data-tab="agentes">
       <div class="card col-12">
-        <h2>Autopilot del agente (detección → tarea automática)</h2>
+        <h2>Qué hacen los agentes (explicado simple)</h2>
+        <p class="muted">Cada agente tiene un trabajo: uno mira macro, otro noticias, otro técnico y otro riesgo. Alpha Scout junta todo y decide estado WATCH/READY/TRIGGERED.</p>
+        <table>
+          <tr><th>Agente</th><th>Rol</th><th>Modelo</th><th>Motivo</th></tr>
+          {% for a in agents_runtime %}
+            <tr><td>{{ a.id }}</td><td>{{ a.role }}</td><td>{{ a.model }}</td><td>{{ a.why }}</td></tr>
+          {% endfor %}
+          {% if agents_runtime|length == 0 %}<tr><td colspan="4">Sin configuración de agentes</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Piloto automático</h2>
+        <p class="muted">Funciona solo por cron. El botón es solo de prueba/manual.</p>
         <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-          <label class="muted">Ejecutar autopilot con score ≥</label>
+          <label class="muted">Ejecutar ahora con score ≥</label>
           <input name="threshold" type="number" min="0" max="100" value="60" style="width:90px;padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           <input name="assigned_to" value="alpha-scout" style="padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Ejecutar piloto automático</button>
         </form>
         <table>
-          <tr><th>Hora</th><th>Umbral</th><th>Agente</th><th>Top vistos</th><th>Tareas creadas</th></tr>
+          <tr><th>Hora</th><th>Umbral</th><th>Agente</th><th>Top vistos</th><th>Tareas</th><th>Órdenes</th></tr>
           {% for a in autopilot_log[:8] %}
-            <tr><td>{{ a.ts }}</td><td>{{ a.threshold }}</td><td>{{ a.assigned_to }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td></tr>
+            <tr><td>{{ a.ts }}</td><td>{{ a.threshold }}</td><td>{{ a.assigned_to }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td><td>{{ a.created_orders or 0 }}</td></tr>
           {% endfor %}
-          {% if autopilot_log|length == 0 %}<tr><td colspan="5">Sin ejecuciones todavía</td></tr>{% endif %}
+          {% if autopilot_log|length == 0 %}<tr><td colspan="6">Sin ejecuciones todavía</td></tr>{% endif %}
         </table>
       </div>
 
@@ -272,7 +307,7 @@
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Earnings</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>RelVol</th><th>Breakout20</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          <tr><th>Ticker</th><th>Estado</th><th>Earnings</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>RelVol</th><th>Breakout20</th><th>5D %</th><th>20D %</th><th>Razones</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
             <tr>
@@ -293,19 +328,10 @@
               <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
               <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
               <td>{{ (o.reasons or [])|join(', ') }}</td>
-              <td>
-                <form method="post" action="/tasks/create" style="display:flex;gap:6px;align-items:center">
-                  <input type="hidden" name="title" value="Analizar oportunidad {{ o.ticker }} (score {{ o.score_final if o.score_final is not none else o.score }})" />
-                  <input type="hidden" name="assigned_to" value="alpha-scout" />
-                  <input type="hidden" name="conviction" value="4" />
-                  <input type="hidden" name="priority" value="alta" />
-                  <button type="submit" style="padding:4px 8px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Crear tarea</button>
-                </form>
-              </td>
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="18">Sin oportunidades calculadas todavía</td></tr>
+            <tr><td colspan="17">Sin oportunidades calculadas todavía</td></tr>
           {% endif %}
         </table>
       </div>
@@ -314,6 +340,8 @@
 
     <div class="grid tab-section" data-tab="tecnico">
       <div class="card col-12">
+        <h2>Avanzado (solo para ajustes manuales)</h2>
+        <p class="muted">Esta pestaña es opcional. Si no quieres tocar nada técnico, ignórala.</p>
         <h2>Override manual (solo si quieres forzar una tarea)</h2>
         <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
