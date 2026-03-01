@@ -437,25 +437,13 @@
       </div>
 
       <div class="card col-12">
-        <h2>🧠 Cónclave de sabios (pros vs contras)</h2>
+        <h2>🧠 Conversaciones y pensamientos (tiempo real)</h2>
         <div class="conclave">
           <div class="conclave-title">Flujo: despachos → pasillo de consenso → decisión final</div>
-          <div class="muted">Narrativa automática en lenguaje natural para enseñar el sistema al público.</div>
+          <div class="muted">Diálogo narrativo entre agentes, actualizado automáticamente.</div>
           <div id="conclaveCount" class="muted" style="margin-top:6px">Agentes reunidos en cónclave: calculando...</div>
         </div>
-        <table style="margin-top:10px">
-          <tr><th>Ticker</th><th>Pros (resumen)</th><th>Contras (abogado del diablo)</th><th>Decisión final</th></tr>
-          {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
-          {% for o in top_ops[:5] %}
-            <tr>
-              <td><strong>{{ o.ticker }}</strong></td>
-              <td>{{ (o.reasons or [])[:3] | join(', ') if o.reasons else 'Sin pros claros' }}</td>
-              <td>{{ o.argumento_en_contra or 'Sin objeción crítica detectada' }}</td>
-              <td><span class="badge {{ 'ok' if o.decision_final=='BUY' else ('warn' if o.decision_final=='HOLD' else 'no') }}">{{ o.decision_final or 'HOLD' }}</span></td>
-            </tr>
-          {% endfor %}
-          {% if top_ops|length == 0 %}<tr><td colspan="4">Sin oportunidades todavía</td></tr>{% endif %}
-        </table>
+        <div id="agentChatLog" style="margin-top:10px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222;padding:10px;max-height:300px;overflow:auto;font-size:13px;line-height:1.55"></div>
       </div>
     </div>
 
@@ -834,6 +822,31 @@
 
         map.appendChild(bubble);
       });
+
+      // Log narrativo de conversaciones
+      const logEl = document.getElementById('agentChatLog');
+      if (logEl) {
+        const lines = [];
+        const hhmm = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        const say = (who, msg) => lines.push(`<div><span style="color:#93a4c9">[${hhmm}]</span> <strong>${who}:</strong> ${msg}</div>`);
+
+        if (top) {
+          say('macro-agent', 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
+          say('news-catalyst-agent', `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
+          say('technical-agent', `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
+          say('devil-advocate-agent', (top.argumento_en_contra || 'No tengo objeción crítica ahora mismo.'));
+          say('risk-exec-agent', `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
+          say('alpha-scout', `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
+        } else {
+          say('alpha-scout', 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
+        }
+
+        (live || []).slice(0,4).forEach(x => {
+          say(x.agent, x.text || 'Sin novedad por ahora.');
+        });
+
+        logEl.innerHTML = lines.join('');
+      }
     })();
 
     setTimeout(() => location.reload(), 30000);
