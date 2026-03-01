@@ -344,7 +344,7 @@
                 </tr>
               {% endfor %}
               {% if signals.earnings is not defined or signals.earnings|length == 0 %}
-                <tr><td colspan="7">Sin datos de earnings (faltan API keys o no hay eventos hoy)</td></tr>
+                <tr><td colspan="7">Sin eventos de earnings próximos para esta watchlist en este momento.</td></tr>
               {% endif %}
             </table>
           </div>
@@ -497,8 +497,8 @@
         <h2>Estado de APIs/Fuentes</h2>
         <table>
           <tr><th>Fuente</th><th>Estado</th><th>Nota</th></tr>
-          <tr><td>FINNHUB_API_KEY</td><td>{{ 'OK' if api_status.FINNHUB_API_KEY else 'FALTA' }}</td><td>Earnings/news estructurado</td></tr>
-          <tr><td>FMP_API_KEY</td><td>{{ 'OK' if api_status.FMP_API_KEY else 'FALTA' }}</td><td>Respaldo de earnings/fundamental</td></tr>
+          <tr><td>FINNHUB_API_KEY</td><td>{{ 'OK' if api_status['FINNHUB_API_KEY'] else 'FALTA' }}</td><td>Earnings/news estructurado</td></tr>
+          <tr><td>FMP_API_KEY</td><td>{{ 'OK' if api_status['FMP_API_KEY'] else 'FALTA' }}</td><td>Respaldo de earnings/fundamental</td></tr>
           <tr><td>OpenInsider</td><td>OK</td><td>Insider buying público (web)</td></tr>
           <tr><td>Yahoo Options</td><td>OK</td><td>Open interest calls/puts base</td></tr>
           <tr><td>Finviz</td><td>OK</td><td>Titulares por ticker (catalizadores)</td></tr>
