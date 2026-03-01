@@ -20,6 +20,8 @@ AGENTS_RUNTIME = Path(os.getenv("AGENTS_RUNTIME", "C:/Users/Fernando/.openclaw/w
 AGENTS_HEALTH = Path(os.getenv("AGENTS_HEALTH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/multiagent_health.json"))
 ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/orders_sim.json"))
 JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/trades_journal.json"))
+SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
+BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -191,6 +193,39 @@ def load_agents_health():
         return []
     except Exception:
         return []
+
+
+def minutes_since_file(path: Path):
+    try:
+        if not path.exists():
+            return None
+        m = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+        return int((datetime.now(UTC) - m).total_seconds() // 60)
+    except Exception:
+        return None
+
+
+def system_status():
+    snap_m = minutes_since_file(SNAPSHOT_PATH)
+    auto_m = minutes_since_file(AUTOPILOT_LOG)
+    backup_m = None
+    try:
+        if BACKUP_ROOT.exists():
+            latest = max(BACKUP_ROOT.iterdir(), key=lambda p: p.stat().st_mtime)
+            backup_m = minutes_since_file(latest)
+    except Exception:
+        backup_m = None
+
+    ok = (snap_m is not None and snap_m <= 20) and (auto_m is not None and auto_m <= 30)
+    status = "OPERATIVO" if ok else "REVISAR"
+    color = "ok" if ok else "no"
+    return {
+        "status": status,
+        "color": color,
+        "snapshot_min": snap_m,
+        "autopilot_min": auto_m,
+        "backup_min": backup_m,
+    }
 
 
 def load_autopilot_log(limit: int = 15):
@@ -578,6 +613,7 @@ def home(request: Request):
     autopilot_log = load_autopilot_log()
     agents_runtime = load_agents_runtime()
     agents_health = load_agents_health()
+    run_status = system_status()
     orders = load_orders()
 
     # Estado "en directo" por agente (lenguaje natural)
@@ -685,6 +721,7 @@ def home(request: Request):
             "agents_runtime": agents_runtime,
             "agents_health": agents_health,
             "agent_live": agent_live,
+            "run_status": run_status,
             "orders_pending": pending_orders,
             "orders_completed": completed_orders,
             "orders_kpi": {

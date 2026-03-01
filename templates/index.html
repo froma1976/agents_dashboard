@@ -63,6 +63,9 @@
       <div class="right">
         <div class="pill"><span class="dot"></span>en línea</div>
         <div class="pill">auto-actualización: 30s</div>
+        <div class="pill" style="border-color:#2a3a5b">
+          Sistema: <span class="badge {{ run_status.color }}" style="margin-left:6px">{{ run_status.status }}</span>
+        </div>
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
           <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
@@ -93,6 +96,11 @@
         <p>
           Estado hoy: <span class="badge {{ market_today.color }}">{{ market_today.label }}</span>
           <span class="muted"> — {{ market_today.reason }}</span>
+        </p>
+        <p class="muted" style="margin-top:6px">
+          Salud automática: snapshot hace {{ run_status.snapshot_min if run_status.snapshot_min is not none else 'N/D' }} min,
+          autopilot hace {{ run_status.autopilot_min if run_status.autopilot_min is not none else 'N/D' }} min,
+          backup hace {{ run_status.backup_min if run_status.backup_min is not none else 'N/D' }} min.
         </p>
       </div>
 
