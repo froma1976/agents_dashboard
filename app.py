@@ -39,6 +39,20 @@ def fingerprint(title: str, details: str) -> str:
     return hashlib.sha256(f"{norm(title)}|{norm(details)}".encode("utf-8")).hexdigest()[:16]
 
 
+def approx_tokens(text: str) -> int:
+    # Aproximación simple y estable para telemetría local (sin SDK): ~4 chars/token
+    if not text:
+        return 0
+    return max(1, int(len(text) / 4))
+
+
+def register_token_usage(cur, model: str, actor: str, tin: int, tout: int, session_key: str = "local-autopilot"):
+    cur.execute(
+        "INSERT INTO token_usage(model, session_key, tokens_in, tokens_out, recorded_at, recorded_by) VALUES(?,?,?,?,?,?)",
+        (model, session_key, int(max(0, tin)), int(max(0, tout)), now_iso(), actor),
+    )
+
+
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -618,6 +632,23 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
             if state in {"READY", "TRIGGERED"}:
                 if upsert_order_pending(ticker, score, state, entry_price):
                     orders_created += 1
+
+        # Telemetría de tokens por actor (estimada) para entorno local/offline
+        market_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in (signals.get("market") or []))
+        news_blob = " ".join(
+            (it.get("title_es") or it.get("title") or "")
+            for feed in (signals.get("news") or [])
+            for it in (feed.get("items") or [])
+        )
+        social_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in (signals.get("social") or []))
+        top_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in top)
+
+        register_token_usage(cur, "deterministic/rules", "macro-regime-agent", approx_tokens(market_blob) // 4, 80)
+        register_token_usage(cur, "deterministic/rules", "technical-structure-agent", approx_tokens(market_blob) // 2, 120)
+        register_token_usage(cur, "deterministic/rules", "social-sentiment-agent", approx_tokens(social_blob), 70)
+        register_token_usage(cur, "deterministic/rules", "catalyst-agent", approx_tokens(news_blob), 110)
+        register_token_usage(cur, "deterministic/rules", assigned_to, approx_tokens(top_blob), 140 + created * 25)
+
         conn.commit()
     finally:
         conn.close()
