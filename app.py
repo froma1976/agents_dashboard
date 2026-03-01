@@ -22,6 +22,8 @@ ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspa
 JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/trades_journal.json"))
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
+GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
+GPT53_MODE = os.getenv("GPT53_MODE", "ahorro").strip().lower()
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -268,6 +270,56 @@ def system_status():
     }
 
 
+def gpt53_limits(mode: str):
+    mode = (mode or "ahorro").lower()
+    if mode == "pro":
+        return {"mode": "pro", "max_calls": 15, "max_tokens": 450000}
+    if mode == "normal":
+        return {"mode": "normal", "max_calls": 8, "max_tokens": 250000}
+    return {"mode": "ahorro", "max_calls": 4, "max_tokens": 120000}
+
+
+def load_gpt53_budget():
+    lim = gpt53_limits(GPT53_MODE)
+    today = datetime.now(UTC).date().isoformat()
+    data = {"date": today, "calls_used": 0, "tokens_used": 0, **lim}
+    try:
+        if GPT53_BUDGET_PATH.exists():
+            raw = json.loads(GPT53_BUDGET_PATH.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                data.update(raw)
+        if data.get("date") != today:
+            data.update({"date": today, "calls_used": 0, "tokens_used": 0})
+        data.update(lim)
+    except Exception:
+        pass
+    return data
+
+
+def save_gpt53_budget(data: dict):
+    GPT53_BUDGET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    GPT53_BUDGET_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def should_use_gpt53(top: dict, budget: dict):
+    if not isinstance(top, dict):
+        return False, "sin_oportunidad"
+    if int(budget.get("calls_used", 0)) >= int(budget.get("max_calls", 0)):
+        return False, "limite_llamadas"
+    if int(budget.get("tokens_used", 0)) >= int(budget.get("max_tokens", 0)):
+        return False, "limite_tokens"
+
+    confidence = int(top.get("confidence_pct") or top.get("score_final") or 0)
+    state = str(top.get("state") or "WATCH")
+    decision = str(top.get("decision_final") or "HOLD")
+
+    if state in {"READY", "TRIGGERED"} and confidence >= 75:
+        return True, "pre_decision_critica"
+    if decision == "AVOID":
+        return True, "conflicto_o_riesgo"
+    return False, "no_critico"
+
+
 def load_autopilot_log(limit: int = 15):
     if not AUTOPILOT_LOG.exists():
         return []
@@ -427,6 +479,7 @@ def api_summary():
         "FROM cron_tasks ORDER BY name"
     )
     portfolio = load_portfolio()
+    gpt53_budget = load_gpt53_budget()
 
     return {
         "task_counts": [dict(r) for r in task_counts],
@@ -435,6 +488,7 @@ def api_summary():
         "cron_rows": [dict(r) for r in cron_rows],
         "token_by_actor": [dict(r) for r in token_by_actor],
         "portfolio": portfolio,
+        "gpt53_budget": gpt53_budget,
     }
 
 
@@ -587,6 +641,13 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
 
     signals = load_signals_snapshot()
     top = signals.get("top_opportunities", []) if isinstance(signals, dict) else []
+    gpt53_budget = load_gpt53_budget()
+    gpt53_allowed, gpt53_reason = should_use_gpt53(top[0] if top else None, gpt53_budget)
+    # Reserva de presupuesto cuando el caso cumple umbral crítico
+    if gpt53_allowed:
+        gpt53_budget["calls_used"] = int(gpt53_budget.get("calls_used", 0)) + 1
+        gpt53_budget["tokens_used"] = int(gpt53_budget.get("tokens_used", 0)) + 6000
+        save_gpt53_budget(gpt53_budget)
     created = 0
     orders_created = 0
     conn = sqlite3.connect(DB_PATH)
@@ -664,6 +725,11 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
         "created_orders": orders_created,
         "closed_orders": closed_orders,
         "top_count": len(top),
+        "gpt53_mode": gpt53_budget.get("mode"),
+        "gpt53_allowed": gpt53_allowed,
+        "gpt53_reason": gpt53_reason,
+        "gpt53_calls_used": gpt53_budget.get("calls_used", 0),
+        "gpt53_calls_max": gpt53_budget.get("max_calls", 0),
     })
     return RedirectResponse(url=f"/?autopilot_created={created}", status_code=303)
 
@@ -805,5 +871,6 @@ def home(request: Request):
             "equity_curve": equity_curve,
             "market_today": market_today,
             "api_status": api_status,
+            "gpt53_budget": data.get("gpt53_budget", {"mode": "ahorro", "calls_used": 0, "max_calls": 4}),
         },
     )
