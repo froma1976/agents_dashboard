@@ -801,10 +801,19 @@
         conclaveEl.textContent = `Agentes reunidos en cónclave: ${inConclave.size}/${agents.length}`;
       }
 
+      const agentNames = {
+        'alpha-scout': 'Alex (Coordinador estratégico)',
+        'macro-agent': 'Marta (Macro y contexto global)',
+        'news-catalyst-agent': 'Nora (Noticias y catalizadores)',
+        'technical-agent': 'Teo (Análisis técnico)',
+        'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
+        'devil-advocate-agent': 'Diego (Abogado del Diablo)',
+      };
+
       agents.forEach((a, idx) => {
         const bubble = document.createElement('div');
         bubble.className = 'agent-bubble';
-        bubble.title = a.id;
+        bubble.title = agentNames[a.id] || a.id;
 
         const liveRow = (live || []).find(x => x.agent === a.id);
         const txt = ((liveRow && liveRow.text) || '').toLowerCase();
@@ -816,7 +825,7 @@
 
         bubble.style.left = (base[0] + spread[0]) + 'px';
         bubble.style.top = (base[1] + spread[1]) + 'px';
-        bubble.textContent = a.id;
+        bubble.textContent = agentNames[a.id] || a.id;
         if(conclave) bubble.classList.add('in-conclave');
         if(transit) bubble.classList.add('in-transit');
 
@@ -831,18 +840,18 @@
         const say = (who, msg) => lines.push(`<div><span style="color:#93a4c9">[${hhmm}]</span> <strong>${who}:</strong> ${msg}</div>`);
 
         if (top) {
-          say('macro-agent', 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
-          say('news-catalyst-agent', `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
-          say('technical-agent', `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
-          say('devil-advocate-agent', (top.argumento_en_contra || 'No tengo objeción crítica ahora mismo.'));
-          say('risk-exec-agent', `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
-          say('alpha-scout', `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
+          say(agentNames['macro-agent'], 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
+          say(agentNames['news-catalyst-agent'], `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
+          say(agentNames['technical-agent'], `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
+          say(agentNames['devil-advocate-agent'], (top.argumento_en_contra || 'No tengo objeción crítica ahora mismo.'));
+          say(agentNames['risk-exec-agent'], `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
+          say(agentNames['alpha-scout'], `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
         } else {
-          say('alpha-scout', 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
+          say(agentNames['alpha-scout'], 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
         }
 
         (live || []).slice(0,4).forEach(x => {
-          say(x.agent, x.text || 'Sin novedad por ahora.');
+          say(agentNames[x.agent] || x.agent, x.text || 'Sin novedad por ahora.');
         });
 
         logEl.innerHTML = lines.join('');
