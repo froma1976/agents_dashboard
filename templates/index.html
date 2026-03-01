@@ -47,11 +47,14 @@
     .tab-section{display:none}
     .tab-section.active{display:grid}
     .expert-only{display:none}
-    .office-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:12px}
-    .room{border:1px solid #2a3a5b;border-radius:12px;padding:10px;background:#0d1423}
+    .office-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:12px;position:relative}
+    .room{border:1px solid #2a3a5b;border-radius:12px;padding:10px;background:linear-gradient(180deg,#0f1830,#0b1222);position:relative;overflow:hidden}
+    .room:after{content:'';position:absolute;right:-30px;top:50%;width:60px;height:1px;background:linear-gradient(90deg,#4f6ea8,transparent);opacity:.6}
     .room h3{margin:0 0 6px;font-size:14px;color:#cfe0ff}
     .agent-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid #35518a;background:#132340;font-size:12px}
     .pulse{animation:pulse 1.2s infinite}
+    .conclave{margin-top:12px;padding:10px;border:1px dashed #3e5f98;border-radius:12px;background:linear-gradient(180deg,#101a31,#0c1426)}
+    .conclave-title{font-weight:700;color:#d6e5ff;margin-bottom:6px}
     @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.55)}70%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
     body.expert .expert-only{display:inline-flex}
     .simple-note{display:inline-flex}
@@ -411,7 +414,11 @@
 
       <div class="card col-12">
         <h2>🧠 Cónclave de sabios (pros vs contras)</h2>
-        <table>
+        <div class="conclave">
+          <div class="conclave-title">Flujo: despachos → pasillo de consenso → decisión final</div>
+          <div class="muted">Narrativa automática en lenguaje natural para enseñar el sistema al público.</div>
+        </div>
+        <table style="margin-top:10px">
           <tr><th>Ticker</th><th>Pros (resumen)</th><th>Contras (abogado del diablo)</th><th>Decisión final</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
