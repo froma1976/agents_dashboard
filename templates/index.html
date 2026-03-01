@@ -441,6 +441,7 @@
         <div class="conclave">
           <div class="conclave-title">Flujo: despachos → pasillo de consenso → decisión final</div>
           <div class="muted">Narrativa automática en lenguaje natural para enseñar el sistema al público.</div>
+          <div id="conclaveCount" class="muted" style="margin-top:6px">Agentes reunidos en cónclave: calculando...</div>
         </div>
         <table style="margin-top:10px">
           <tr><th>Ticker</th><th>Pros (resumen)</th><th>Contras (abogado del diablo)</th><th>Decisión final</th></tr>
@@ -795,7 +796,22 @@
         'conclave':[300,440],
       };
 
-      const inConclave = hasConclave ? new Set(['alpha-scout','devil-advocate-agent','macro-agent','news-catalyst-agent']) : new Set();
+      // Versión final: cónclave dinámico según evidencia real del top ticker
+      const top = (Array.isArray(topOps) && topOps.length) ? topOps[0] : null;
+      const inConclave = new Set();
+      if (top) {
+        inConclave.add('alpha-scout');
+        if ((top.score_macro_adj ?? 0) !== 0 || (top.reasons || []).some(r => String(r).includes('macro'))) inConclave.add('macro-agent');
+        if ((top.catalyst_score ?? 0) > 0 || (top.fundamental_inflection_score ?? 0) > 0) inConclave.add('news-catalyst-agent');
+        if ((top.score_tech ?? 0) >= 45 || top.breakout_20 || (top.rel_volume ?? 0) >= 1.1) inConclave.add('technical-agent');
+        if ((top.argumento_en_contra || '').toLowerCase() !== 'sin objeción crítica detectada') inConclave.add('devil-advocate-agent');
+        if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) inConclave.add('risk-exec-agent');
+      }
+
+      const conclaveEl = document.getElementById('conclaveCount');
+      if (conclaveEl) {
+        conclaveEl.textContent = `Agentes reunidos en cónclave: ${inConclave.size}/${agents.length}`;
+      }
 
       agents.forEach((a, idx) => {
         const bubble = document.createElement('div');
