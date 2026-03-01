@@ -193,11 +193,24 @@
       <div class="card col-12">
         <h2>Órdenes pendientes</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th></tr>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th><th>Acción</th></tr>
           {% for o in orders_pending %}
-            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state }}</td><td>{{ o.score }}</td><td>{{ o.created_at }}</td></tr>
+            <tr>
+              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state }}</td><td>{{ o.score }}</td><td>{{ o.created_at }}</td>
+              <td>
+                <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
+                  <input type="hidden" name="order_id" value="{{ o.id }}" />
+                  <select name="result" style="padding:6px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff">
+                    <option value="ganada">ganada</option>
+                    <option value="neutral">neutral</option>
+                    <option value="perdida">perdida</option>
+                  </select>
+                  <button type="submit" style="padding:6px 10px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Completar</button>
+                </form>
+              </td>
+            </tr>
           {% endfor %}
-          {% if orders_pending|length == 0 %}<tr><td colspan="5">Sin órdenes pendientes</td></tr>{% endif %}
+          {% if orders_pending|length == 0 %}<tr><td colspan="6">Sin órdenes pendientes</td></tr>{% endif %}
         </table>
       </div>
 

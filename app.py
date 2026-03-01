@@ -328,6 +328,30 @@ def update_task_status(task_id: str = Form(...), status: str = Form(...)):
     return RedirectResponse(url="/", status_code=303)
 
 
+@app.post("/orders/complete")
+def complete_order(order_id: str = Form(...), result: str = Form("simulada")):
+    orders = load_orders()
+    pending = orders.get("pending", [])
+    completed = orders.get("completed", [])
+    moved = None
+    keep = []
+    for o in pending:
+        if o.get("id") == order_id and moved is None:
+            o["status"] = "completed"
+            o["result"] = result
+            o["closed_at"] = now_iso()
+            moved = o
+        else:
+            keep.append(o)
+    orders["pending"] = keep
+    if moved:
+        completed.append(moved)
+        orders["completed"] = completed
+        ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        ORDERS_PATH.write_text(json.dumps(orders, ensure_ascii=False, indent=2), encoding="utf-8")
+    return RedirectResponse(url="/", status_code=303)
+
+
 @app.post("/signals/refresh")
 def refresh_signals():
     if INGEST_SCRIPT.exists():
