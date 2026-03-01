@@ -462,6 +462,7 @@
           <div class="conclave-title">Flujo: despachos → pasillo de consenso → decisión final</div>
           <div class="muted">Diálogo narrativo entre agentes, actualizado automáticamente.</div>
           <div id="conclaveCount" class="muted" style="margin-top:6px">Agentes reunidos en cónclave: calculando...</div>
+          <div id="gpt53Alert" class="muted" style="margin-top:4px"></div>
         </div>
         <div id="agentChatLog" class="chat-log"></div>
       </div>
@@ -507,7 +508,7 @@
       </div>
 
       <div class="card col-12">
-        <h2>Tokens por agente/proceso</h2>
+        <h2>Tokens por agente/proceso <span class="muted" style="font-size:12px">(estimado local)</span></h2>
         <table>
           <tr><th>Actor</th><th>Tokens in</th><th>Tokens out</th><th>Total</th></tr>
           {% for t in token_by_actor %}
@@ -823,6 +824,14 @@
       const conclaveEl = document.getElementById('conclaveCount');
       if (conclaveEl) {
         conclaveEl.textContent = `Agentes reunidos en cónclave: ${inConclave.size}/${agents.length}`;
+      }
+      const gptAlert = document.getElementById('gpt53Alert');
+      if (gptAlert) {
+        if (inConclave.has('gpt53-council-agent')) {
+          gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo GPT‑5.3) está arbitrando la decisión final.';
+        } else {
+          gptAlert.innerHTML = '<span class="badge ok">Modo normal</span> Sin arbitraje GPT‑5.3 en este ciclo.';
+        }
       }
 
       const agentNames = {
