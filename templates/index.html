@@ -202,12 +202,13 @@
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          <tr><th>Ticker</th><th>Estado</th><th>Earnings</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>RelVol</th><th>Breakout20</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
             <tr>
               <td>{{ o.ticker }}</td>
               <td>{{ o.state or 'WATCH' }}</td>
+              <td>{{ o.earnings_label or 'No Data' }}</td>
               <td><strong>{{ o.score_final if o.score_final is not none else o.score }}</strong></td>
               <td>{{ o.score_tech if o.score_tech is not none else '-' }}</td>
               <td>{{ o.score_asymmetry if o.score_asymmetry is not none else '-' }}</td>
@@ -217,6 +218,8 @@
               <td>{{ o.rsi14 if o.rsi14 is not none else '-' }}</td>
               <td>{{ o.ema20 if o.ema20 is not none else '-' }}</td>
               <td>{{ o.ema50 if o.ema50 is not none else '-' }}</td>
+              <td>{{ o.rel_volume if o.rel_volume is not none else '-' }}</td>
+              <td>{{ 'Sí' if o.breakout_20 else 'No' }}</td>
               <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
               <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
               <td>{{ (o.reasons or [])|join(', ') }}</td>
@@ -232,7 +235,7 @@
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="15">Sin oportunidades calculadas todavía</td></tr>
+            <tr><td colspan="18">Sin oportunidades calculadas todavía</td></tr>
           {% endif %}
         </table>
       </div>
