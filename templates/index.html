@@ -860,13 +860,16 @@
         const lines = [];
         const hhmm = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
         const say = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> ${msg}</div></div>`);
+        const think = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> Pienso <em>(${msg})</em></div></div>`);
 
         if (top) {
           say(agentNames['macro-agent'], 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
           say(agentNames['news-catalyst-agent'], `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
+          think(agentNames['technical-agent'], `si el volumen acompaña, esta estructura puede tener continuidad`);
           say(agentNames['technical-agent'], `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
-          say(agentNames['devil-advocate-agent'], (top.argumento_en_contra || 'No tengo objeción crítica ahora mismo.'));
+          think(agentNames['devil-advocate-agent'], (top.argumento_en_contra || 'no tengo objeción crítica ahora mismo'));
           say(agentNames['risk-exec-agent'], `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
+          think(agentNames['alpha-scout'], `debo cerrar una decisión clara y ejecutable`);
           say(agentNames['alpha-scout'], `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
         } else {
           say(agentNames['alpha-scout'], 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
