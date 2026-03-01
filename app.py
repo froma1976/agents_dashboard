@@ -653,6 +653,14 @@ def home(request: Request):
     except Exception:
         pass
 
+    api_status = {
+        "FINNHUB_API_KEY": bool(os.getenv("FINNHUB_API_KEY", "").strip()),
+        "FMP_API_KEY": bool(os.getenv("FMP_API_KEY", "").strip()),
+        "OPENINSIDER": True,
+        "YAHOO_OPTIONS": True,
+        "FINVIZ": True,
+    }
+
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
 
@@ -691,5 +699,6 @@ def home(request: Request):
             },
             "equity_curve": equity_curve,
             "market_today": market_today,
+            "api_status": api_status,
         },
     )

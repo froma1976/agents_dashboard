@@ -493,6 +493,18 @@
       <div class="card col-12">
         <h2>Avanzado (solo para ajustes manuales)</h2>
         <p class="muted">Esta pestaña es opcional. Si no quieres tocar nada técnico, ignórala.</p>
+
+        <h2>Estado de APIs/Fuentes</h2>
+        <table>
+          <tr><th>Fuente</th><th>Estado</th><th>Nota</th></tr>
+          <tr><td>FINNHUB_API_KEY</td><td>{{ 'OK' if api_status.FINNHUB_API_KEY else 'FALTA' }}</td><td>Earnings/news estructurado</td></tr>
+          <tr><td>FMP_API_KEY</td><td>{{ 'OK' if api_status.FMP_API_KEY else 'FALTA' }}</td><td>Respaldo de earnings/fundamental</td></tr>
+          <tr><td>OpenInsider</td><td>OK</td><td>Insider buying público (web)</td></tr>
+          <tr><td>Yahoo Options</td><td>OK</td><td>Open interest calls/puts base</td></tr>
+          <tr><td>Finviz</td><td>OK</td><td>Titulares por ticker (catalizadores)</td></tr>
+        </table>
+        <div class="muted" style="margin-top:8px">Si quieres más precisión pro, luego pedimos APIs premium de opciones e insiders.</div>
+
         <h2>Override manual (solo si quieres forzar una tarea)</h2>
         <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
