@@ -475,6 +475,15 @@ def home(request: Request):
     agents_runtime = load_agents_runtime()
     agents_health = load_agents_health()
     orders = load_orders()
+    pending_orders = orders.get("pending", [])
+    completed_orders = orders.get("completed", [])
+
+    wins = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "ganada")
+    losses = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "perdida")
+    neutral = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "neutral")
+    total_closed = len(completed_orders)
+    win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0.0
+
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
 
@@ -498,7 +507,15 @@ def home(request: Request):
             "autopilot_log": autopilot_log,
             "agents_runtime": agents_runtime,
             "agents_health": agents_health,
-            "orders_pending": orders.get("pending", []),
-            "orders_completed": orders.get("completed", []),
+            "orders_pending": pending_orders,
+            "orders_completed": completed_orders,
+            "orders_kpi": {
+                "pending": len(pending_orders),
+                "closed": total_closed,
+                "wins": wins,
+                "losses": losses,
+                "neutral": neutral,
+                "win_rate": win_rate,
+            },
         },
     )

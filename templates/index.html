@@ -194,6 +194,21 @@
       </div>
 
       <div class="card col-12">
+        <h2>KPIs de rendimiento (simulado)</h2>
+        <table>
+          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th></tr>
+          <tr>
+            <td>{{ orders_kpi.pending }}</td>
+            <td>{{ orders_kpi.closed }}</td>
+            <td>{{ orders_kpi.wins }}</td>
+            <td>{{ orders_kpi.losses }}</td>
+            <td>{{ orders_kpi.neutral }}</td>
+            <td>{{ orders_kpi.win_rate }}%</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Órdenes pendientes</h2>
         <table>
           <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th><th>Acción</th></tr>
