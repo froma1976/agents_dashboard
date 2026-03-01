@@ -19,6 +19,7 @@ AUTOPILOT_LOG = Path(os.getenv("AUTOPILOT_LOG", "C:/Users/Fernando/.openclaw/wor
 AGENTS_RUNTIME = Path(os.getenv("AGENTS_RUNTIME", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/AGENTS_RUNTIME_LOCAL.json"))
 AGENTS_HEALTH = Path(os.getenv("AGENTS_HEALTH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/multiagent_health.json"))
 ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/orders_sim.json"))
+JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/trades_journal.json"))
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -161,6 +162,23 @@ def load_orders():
         return {"pending": data.get("pending", []), "completed": data.get("completed", [])}
     except Exception:
         return {"pending": [], "completed": []}
+
+
+def load_journal():
+    if not JOURNAL_PATH.exists():
+        return []
+    try:
+        data = json.loads(JOURNAL_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def append_journal(entry: dict):
+    JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    rows = load_journal()
+    rows.append(entry)
+    JOURNAL_PATH.write_text(json.dumps(rows[-2000:], ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_agents_health():
@@ -349,6 +367,16 @@ def complete_order(order_id: str = Form(...), result: str = Form("simulada")):
         orders["completed"] = completed
         ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
         ORDERS_PATH.write_text(json.dumps(orders, ensure_ascii=False, indent=2), encoding="utf-8")
+        r_mult = 1 if result == "ganada" else (-1 if result == "perdida" else 0)
+        append_journal({
+            "ts": now_iso(),
+            "order_id": moved.get("id"),
+            "ticker": moved.get("ticker"),
+            "state": moved.get("state"),
+            "score": moved.get("score"),
+            "result": result,
+            "r_multiple": r_mult,
+        })
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -477,12 +505,26 @@ def home(request: Request):
     orders = load_orders()
     pending_orders = orders.get("pending", [])
     completed_orders = orders.get("completed", [])
+    journal = load_journal()
 
     wins = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "ganada")
     losses = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "perdida")
     neutral = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "neutral")
     total_closed = len(completed_orders)
     win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0.0
+
+    # expectancy y drawdown en R-múltiplos (simulado)
+    r_values = [float(j.get("r_multiple", 0)) for j in journal if isinstance(j, dict)]
+    expectancy_r = round((sum(r_values) / len(r_values)), 3) if r_values else 0.0
+    cum = 0.0
+    peak = 0.0
+    max_dd = 0.0
+    for r in r_values:
+        cum += r
+        peak = max(peak, cum)
+        dd = peak - cum
+        max_dd = max(max_dd, dd)
+    max_drawdown_r = round(max_dd, 3)
 
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
@@ -516,6 +558,8 @@ def home(request: Request):
                 "losses": losses,
                 "neutral": neutral,
                 "win_rate": win_rate,
+                "expectancy_r": expectancy_r,
+                "max_drawdown_r": max_drawdown_r,
             },
         },
     )

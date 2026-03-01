@@ -195,15 +195,18 @@
 
       <div class="card col-12">
         <h2>KPIs de rendimiento (simulado)</h2>
+        {% set kpi = orders_kpi|default({'pending':0,'closed':0,'wins':0,'losses':0,'neutral':0,'win_rate':0}) %}
         <table>
-          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th></tr>
+          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th></tr>
           <tr>
-            <td>{{ orders_kpi.pending }}</td>
-            <td>{{ orders_kpi.closed }}</td>
-            <td>{{ orders_kpi.wins }}</td>
-            <td>{{ orders_kpi.losses }}</td>
-            <td>{{ orders_kpi.neutral }}</td>
-            <td>{{ orders_kpi.win_rate }}%</td>
+            <td>{{ kpi.pending }}</td>
+            <td>{{ kpi.closed }}</td>
+            <td>{{ kpi.wins }}</td>
+            <td>{{ kpi.losses }}</td>
+            <td>{{ kpi.neutral }}</td>
+            <td>{{ kpi.win_rate }}%</td>
+            <td>{{ kpi.expectancy_r }}</td>
+            <td>{{ kpi.max_drawdown_r }}</td>
           </tr>
         </table>
       </div>
