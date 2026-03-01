@@ -352,19 +352,28 @@
       </div>
 
       <div class="card col-12">
-        <h2>Salud de agentes LLM (local)</h2>
+        <h2>Estado de agentes (claro y simple)</h2>
         <table>
-          <tr><th>Agente</th><th>Modelo</th><th>Estado</th><th>Latencia (s)</th><th>Detalle</th></tr>
+          <tr><th>Agente</th><th>Modelo</th><th>Estado</th><th>Tiempo de respuesta</th><th>Lectura humana</th></tr>
           {% for h in agents_health %}
+            {% set ok = h.ok %}
+            {% set estado = 'operativo' if ok else 'revisar' %}
+            {% set badge = 'ok' if ok else 'no' %}
+            {% set lat = h.latency_s if h.latency_s is not none else '-' %}
+            {% if h.model == 'deterministic' %}
+              {% set lectura = 'Funciona por reglas fijas (sin IA de texto).' %}
+            {% else %}
+              {% set lectura = 'IA local respondiendo correctamente.' if ok else 'La IA local no respondió bien en la última prueba.' %}
+            {% endif %}
             <tr>
               <td>{{ h.agent }}</td>
               <td>{{ h.model }}</td>
-              <td>{{ 'OK' if h.ok else 'ERROR' }}</td>
-              <td>{{ h.latency_s }}</td>
-              <td>{{ h.note }}</td>
+              <td><span class="badge {{ badge }}">{{ estado }}</span></td>
+              <td>{{ lat }} s</td>
+              <td>{{ lectura }}</td>
             </tr>
           {% endfor %}
-          {% if agents_health|length == 0 %}<tr><td colspan="5">Sin datos de health check</td></tr>{% endif %}
+          {% if agents_health|length == 0 %}<tr><td colspan="5">Sin datos de salud todavía</td></tr>{% endif %}
         </table>
       </div>
 
@@ -519,11 +528,17 @@
               <td>{{ conv }}</td>
               <td>{{ r.updated_at }}</td>
               <td>
-                <form method="post" action="/tasks/status" style="display:flex;gap:6px;flex-wrap:wrap">
+                <form method="post" action="/tasks/status" style="display:flex;gap:6px;align-items:center">
                   <input type="hidden" name="task_id" value="{{ r.task_id }}" />
-                  <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">En curso</button>
-                  <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Hecha</button>
-                  <button name="status" value="blocked" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#4b1f1f;color:#ffb4b4;cursor:pointer">Bloqueada</button>
+                  {% if r.status == 'pending' %}
+                    <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Pasar a en curso</button>
+                  {% elif r.status == 'running' %}
+                    <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Marcar hecha</button>
+                  {% elif r.status == 'blocked' %}
+                    <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Reanudar (en curso)</button>
+                  {% else %}
+                    <span class="muted">Sin acciones</span>
+                  {% endif %}
                 </form>
               </td>
             </tr>
