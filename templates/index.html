@@ -105,6 +105,9 @@
         <div class="pill" style="border-color:#2a3a5b">
           Modo: <span class="badge {{ 'ok' if run_status.mode=='NORMAL' else 'warn' }}" style="margin-left:6px">{{ run_status.mode }}</span>
         </div>
+        <div class="pill" style="border-color:#2a3a5b">
+          GPT‑5.3 {{ gpt53_budget.mode }}: {{ gpt53_budget.calls_used }}/{{ gpt53_budget.max_calls }}
+        </div>
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
           <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
@@ -441,6 +444,10 @@
           <div class="room-box" style="left:560px;top:180px">
             <span class="room-name">Alpha Scout</span>
             Aquí se orquesta todo y se decide qué pasa a WATCH/READY/TRIGGERED.
+          </div>
+          <div class="room-box" style="left:560px;top:330px">
+            <span class="room-name">Consejo GPT‑5.3</span>
+            Aquí entra solo en casos críticos para arbitrar la decisión final.
           </div>
           <div class="room-box" style="left:280px;top:370px">
             <span class="room-name">🧠 Cónclave</span>
@@ -794,6 +801,7 @@
         'risk-exec-agent':[26,258],
         'devil-advocate-agent':[305,258],
         'alpha-scout':[575,258],
+        'gpt53-council-agent':[575,405],
         'conclave':[300,440],
       };
 
@@ -807,6 +815,9 @@
         if ((top.score_tech ?? 0) >= 45 || top.breakout_20 || (top.rel_volume ?? 0) >= 1.1) inConclave.add('technical-agent');
         if ((top.argumento_en_contra || '').toLowerCase() !== 'sin objeción crítica detectada') inConclave.add('devil-advocate-agent');
         if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) inConclave.add('risk-exec-agent');
+        const conf = Number(top.confidence_pct ?? top.score_final ?? 0);
+        const critical = ((top.state === 'READY' || top.state === 'TRIGGERED') && conf >= 75) || (top.decision_final === 'AVOID');
+        if (critical) inConclave.add('gpt53-council-agent');
       }
 
       const conclaveEl = document.getElementById('conclaveCount');
@@ -821,6 +832,7 @@
         'technical-agent': 'Teo (Análisis técnico)',
         'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
         'devil-advocate-agent': 'Diego (Abogado del Diablo)',
+        'gpt53-council-agent': 'Gaia (Consejo GPT‑5.3)',
       };
 
       let conclaveIdx = 0;

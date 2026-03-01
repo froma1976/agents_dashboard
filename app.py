@@ -709,6 +709,8 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
         register_token_usage(cur, "deterministic/rules", "news-catalyst-agent", approx_tokens(news_blob), 110)
         register_token_usage(cur, "deterministic/rules", "risk-exec-agent", approx_tokens(social_blob), 70)
         register_token_usage(cur, "deterministic/rules", "devil-advocate-agent", approx_tokens(top_blob), 95)
+        if gpt53_allowed:
+            register_token_usage(cur, "openai-codex/gpt-5.3-codex", "gpt53-council-agent", 3200, 900)
         register_token_usage(cur, "deterministic/rules", assigned_to, approx_tokens(top_blob), 140 + created * 25)
 
         conn.commit()
