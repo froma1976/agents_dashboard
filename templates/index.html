@@ -110,7 +110,7 @@
         {% set top = top_ops[0] if top_ops|length > 0 else None %}
         <p>
           {% if top %}
-            Mejor oportunidad actual: <strong>{{ top.ticker }}</strong> (estado: <strong>{{ top.state or 'WATCH' }}</strong>, score: <strong>{{ top.score_final or top.score }}</strong>). 
+            Mejor oportunidad actual: <strong>{{ top.ticker }}</strong> (estado: <strong>{{ top.state or 'WATCH' }}</strong>, score: <strong>{{ top.score_final or top.score }}</strong>).
             Acción sugerida: <strong>{% if (top.state or 'WATCH') == 'TRIGGERED' %}ejecución simulada{% elif (top.state or 'WATCH') == 'READY' %}vigilar de cerca{% else %}esperar confirmación{% endif %}</strong>.
           {% else %}
             Sin oportunidades claras ahora. Acción sugerida: esperar actualización.
@@ -321,9 +321,14 @@
 
           <div class="col-12" style="grid-column: span 12;">
             <h2>Señal social web (Stocktwits)</h2>
+
+            <!-- ✅ FIX: nunca revienta si falta signals.social -->
+            {% set social = (signals.get('social', []) if signals else []) %}
+
             <table>
               <tr><th>Símbolo</th><th>Mensajes</th><th>Bullish</th><th>Bearish</th><th>Score Sentimiento</th></tr>
-              {% for s in signals.social[:8] %}
+
+              {% for s in social[:8] %}
                 <tr>
                   <td>{{ s.symbol }}</td>
                   <td>{{ s.messages_checked or '-' }}</td>
@@ -332,7 +337,8 @@
                   <td>{{ s.sentiment_score if s.sentiment_score is not none else '-' }}</td>
                 </tr>
               {% endfor %}
-              {% if signals.social is not defined or signals.social|length == 0 %}
+
+              {% if social|length == 0 %}
                 <tr><td colspan="5">Sin datos sociales</td></tr>
               {% endif %}
             </table>
