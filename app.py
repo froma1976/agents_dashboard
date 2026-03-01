@@ -595,12 +595,27 @@ def home(request: Request):
     cum = 0.0
     peak = 0.0
     max_dd = 0.0
+    equity_curve = [0.0]
     for r in r_values:
         cum += r
+        equity_curve.append(round(cum, 3))
         peak = max(peak, cum)
         dd = peak - cum
         max_dd = max(max_dd, dd)
     max_drawdown_r = round(max_dd, 3)
+
+    # Semáforo global de mercado (simple)
+    market_today = {"label": "NEUTRO", "color": "warn", "reason": "señales mixtas"}
+    try:
+        mr = signals.get("macro_regime", {}) if isinstance(signals, dict) else {}
+        vix = mr.get("vix")
+        macro_adj = mr.get("macro_adj", 0)
+        if (vix is not None and float(vix) < 18) or macro_adj >= 6:
+            market_today = {"label": "RISK-ON", "color": "ok", "reason": "volatilidad controlada / liquidez favorable"}
+        elif (vix is not None and float(vix) > 22) or macro_adj <= -6:
+            market_today = {"label": "RISK-OFF", "color": "no", "reason": "volatilidad alta / entorno defensivo"}
+    except Exception:
+        pass
 
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
@@ -637,5 +652,7 @@ def home(request: Request):
                 "expectancy_r": expectancy_r,
                 "max_drawdown_r": max_drawdown_r,
             },
+            "equity_curve": equity_curve,
+            "market_today": market_today,
         },
     )
