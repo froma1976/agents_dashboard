@@ -401,7 +401,8 @@
           {% for o in top_ops[:5] %}
             <tr>
               <td>{{ o.ticker }}</td>
-              <td>{{ o.state or 'WATCH' }}</td>
+              {% set stx = o.state or 'WATCH' %}
+              <td><span class="badge {{ 'ok' if stx=='TRIGGERED' else ('warn' if stx=='READY' else 'no') }}">{{ '🟢 ' if stx=='TRIGGERED' else ('🟡 ' if stx=='READY' else '🔴 ') }}{{ stx }}</span></td>
               <td>{{ o.earnings_label or 'No Data' }}</td>
               <td><strong>{{ o.score_final if o.score_final is not none else o.score }}</strong></td>
               <td>{{ o.score_tech if o.score_tech is not none else '-' }}</td>
