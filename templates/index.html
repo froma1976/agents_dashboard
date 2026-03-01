@@ -27,7 +27,7 @@
     .kpi .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
     .col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
     h2{margin:0 0 10px;font-size:15px;color:#c6d3f2}
-    table{width:100%;border-collapse:collapse;font-size:13px}
+    table{width:100%;border-collapse:collapse;font-size:13px;display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
     th,td{border-bottom:1px solid #2a3a5b;padding:8px;text-align:left}
     th{color:#b9c8ee;font-weight:600}
     .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
@@ -37,7 +37,7 @@
     .pending{background:#3b2c0a;color:#ffd27a}.running{background:#0c3147;color:#8ad4ff}
     .done{background:#133a22;color:#8ee6b0}.blocked{background:#4b1f1f;color:#ffb4b4}
     .cancelled{background:#374151;color:#d1d5db}
-    .right{display:flex;gap:8px;align-items:center}
+    .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
     .pill{border:1px solid var(--line);padding:5px 10px;border-radius:999px;font-size:12px;color:#c7d4f5}
     .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--ok);margin-right:6px}
     .foot{margin-top:10px;font-size:12px;color:var(--muted)}
@@ -51,6 +51,19 @@
     .simple-note{display:inline-flex}
     body.expert .simple-note{display:none}
     @media (max-width:960px){.col-3,.col-4,.col-6,.col-8{grid-column:span 12}}
+    @media (max-width:640px){
+      .wrap{margin:12px auto;padding:0 10px}
+      .top{flex-direction:column;align-items:flex-start;gap:10px}
+      h1{font-size:22px;line-height:1.2}
+      .muted{font-size:12px}
+      .right{width:100%;justify-content:flex-start}
+      .pill{font-size:11px;padding:5px 8px}
+      .tab-btn{padding:7px 10px;font-size:12px}
+      .card{padding:10px;border-radius:12px}
+      .kpi .v{font-size:22px}
+      th,td{padding:7px;font-size:12px}
+      .foot{font-size:11px}
+    }
   </style>
 </head>
 <body>
