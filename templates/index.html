@@ -345,6 +345,31 @@
       </div>
 
       <div class="card col-12">
+        <h2>Matriz de decisión por agente (por ticker)</h2>
+        <p class="muted">Así ves qué bloque ha pasado cada activo antes de decidir WATCH/READY/TRIGGERED.</p>
+        <table>
+          <tr><th>Ticker</th><th>Macro</th><th>Estructural</th><th>Capital</th><th>Técnico</th><th>Convergencia</th><th>Estado final</th></tr>
+          {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
+          {% for o in top_ops[:8] %}
+            {% set macro_ok = (o.score_macro_adj if o.score_macro_adj is not none else 0) >= 0 %}
+            {% set structural_ok = ((o.fundamental_inflection_score or 0) + (o.catalyst_score or 0) + (o.spinoff_score or 0)) >= 10 %}
+            {% set capital_ok = ((o.insider_score or 0) + (o.options_flow_score or 0)) > 0 or ((o.score_social if o.score_social is not none else -999) >= 50) %}
+            {% set technical_ok = (o.score_tech or 0) >= 55 %}
+            <tr>
+              <td>{{ o.ticker }}</td>
+              <td>{{ 'OK' if macro_ok else 'NO' }}</td>
+              <td>{{ 'OK' if structural_ok else 'NO' }}</td>
+              <td>{{ 'OK' if capital_ok else 'NO' }}</td>
+              <td>{{ 'OK' if technical_ok else 'NO' }}</td>
+              <td>{{ o.convergence_count if o.convergence_count is not none else 0 }}/3</td>
+              <td><strong>{{ o.state or 'WATCH' }}</strong></td>
+            </tr>
+          {% endfor %}
+          {% if top_ops|length == 0 %}<tr><td colspan="7">Sin datos de oportunidades</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Piloto automático</h2>
         <p class="muted">Funciona solo por cron. El botón es solo de prueba/manual.</p>
         <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
