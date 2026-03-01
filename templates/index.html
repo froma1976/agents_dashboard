@@ -150,30 +150,45 @@
       </div>
 
       <div class="card col-12">
-        <h2>Tareas de agentes (resumen rápido)</h2>
+        <h2>Qué están haciendo los agentes (en lenguaje normal)</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Agente</th><th>Título</th><th>Actualizado</th></tr>
+          <tr><th>Estado</th><th>Agente</th><th>Qué está haciendo</th><th>Actualizado</th></tr>
           {% for r in recent_tasks[:8] %}
             {% set st = r.status %}
-            {% if st == 'pending' %}{% set st_es = 'pendiente' %}
-            {% elif st == 'running' %}{% set st_es = 'en curso' %}
-            {% elif st == 'done' %}{% set st_es = 'hecha' %}
-            {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
-            {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+            {% if st == 'pending' %}{% set st_es = 'en espera' %}
+            {% elif st == 'running' %}{% set st_es = 'trabajando' %}
+            {% elif st == 'done' %}{% set st_es = 'terminado' %}
+            {% elif st == 'blocked' %}{% set st_es = 'bloqueado' %}
+            {% elif st == 'cancelled' %}{% set st_es = 'cancelado' %}
             {% else %}{% set st_es = st %}{% endif %}
+
+            {% set t = (r.title or '')|lower %}
+            {% if 'qqq' in t %}
+              {% set tarea_humana = 'Analizando el principal ETF tecnológico de EE.UU.' %}
+            {% elif 'spy' in t %}
+              {% set tarea_humana = 'Analizando el índice general del mercado de EE.UU.' %}
+            {% elif 'iwm' in t %}
+              {% set tarea_humana = 'Analizando small caps de EE.UU. para detectar impulso.' %}
+            {% elif 'nvda' in t %}
+              {% set tarea_humana = 'Analizando NVIDIA por posible oportunidad.' %}
+            {% elif '[auto]' in t or 'ejecutar plan' in t %}
+              {% set tarea_humana = 'Evaluando si conviene abrir una operación simulada.' %}
+            {% else %}
+              {% set tarea_humana = 'Revisando señales del mercado y riesgo.' %}
+            {% endif %}
+
             <tr>
-              <td>{{ r.task_id }}</td>
               <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
               <td>{{ r.assigned_to }}</td>
-              <td>{{ r.title }}</td>
+              <td>{{ tarea_humana }}</td>
               <td>{{ r.updated_at }}</td>
             </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="5">Sin tareas todavía</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="4">Sin tareas todavía</td></tr>{% endif %}
         </table>
       </div>
 
-      <div class="card col-12">
+      <div class="card col-12 expert-only">
         <h2>Historial de commits (últimos cambios)</h2>
         <table>
           <tr><th>Commit</th><th>Fecha</th><th>Mensaje</th></tr>
