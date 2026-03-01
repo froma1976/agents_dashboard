@@ -219,23 +219,92 @@ def save_autopilot_entry(entry: dict):
     AUTOPILOT_LOG.write_text(json.dumps(rows[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def upsert_order_pending(ticker: str, score: int, state: str):
+def upsert_order_pending(ticker: str, score: int, state: str, entry_price: float | None = None):
     ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
     orders = load_orders()
     pending = orders.get("pending", [])
     if any(o.get("ticker") == ticker and o.get("status") == "pending" for o in pending):
         return False
+
+    target_price = None
+    stop_price = None
+    if entry_price is not None and entry_price > 0:
+        target_price = round(entry_price * 1.06, 4)  # +6%
+        stop_price = round(entry_price * 0.97, 4)    # -3%
+
     pending.append({
         "id": f"ord_{hashlib.sha1((ticker + now_iso()).encode()).hexdigest()[:10]}",
         "ticker": ticker,
         "status": "pending",
         "state": state,
         "score": score,
+        "entry_price": entry_price,
+        "target_price": target_price,
+        "stop_price": stop_price,
         "created_at": now_iso(),
     })
     orders["pending"] = pending
     ORDERS_PATH.write_text(json.dumps(orders, ensure_ascii=False, indent=2), encoding="utf-8")
     return True
+
+
+def auto_close_orders_from_signals(signals: dict):
+    orders = load_orders()
+    pending = orders.get("pending", [])
+    completed = orders.get("completed", [])
+
+    market = signals.get("market", []) if isinstance(signals, dict) else []
+    price_map = {}
+    for m in market:
+        if isinstance(m, dict) and m.get("ticker"):
+            px = m.get("regularMarketPrice") or m.get("lastCloseSeries")
+            try:
+                price_map[m.get("ticker")] = float(px)
+            except Exception:
+                pass
+
+    new_pending = []
+    closed = 0
+    for o in pending:
+        ticker = o.get("ticker")
+        px = price_map.get(ticker)
+        target = o.get("target_price")
+        stop = o.get("stop_price")
+        if px is None or target is None or stop is None:
+            new_pending.append(o)
+            continue
+
+        result = None
+        if px >= float(target):
+            result = "ganada"
+        elif px <= float(stop):
+            result = "perdida"
+
+        if result:
+            o["status"] = "completed"
+            o["result"] = result
+            o["closed_at"] = now_iso()
+            o["close_price"] = px
+            completed.append(o)
+            r_mult = 1 if result == "ganada" else -1
+            append_journal({
+                "ts": now_iso(),
+                "order_id": o.get("id"),
+                "ticker": ticker,
+                "state": o.get("state"),
+                "score": o.get("score"),
+                "result": result,
+                "r_multiple": r_mult,
+            })
+            closed += 1
+        else:
+            new_pending.append(o)
+
+    orders["pending"] = new_pending
+    orders["completed"] = completed
+    ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ORDERS_PATH.write_text(json.dumps(orders, ensure_ascii=False, indent=2), encoding="utf-8")
+    return closed
 
 
 def latest_commits(limit: int = 6):
@@ -454,6 +523,10 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
                 continue
             state = str(o.get("state", "WATCH"))
             ticker = o.get("ticker", "N/A")
+            try:
+                entry_price = float(o.get("regularMarketPrice") or o.get("lastCloseSeries"))
+            except Exception:
+                entry_price = None
             title = f"[AUTO] Ejecutar plan {ticker} (score {score})"
             details = f"[conviction:4] auto-autopilot score>={threshold} reasons={','.join(o.get('reasons', []))}"
             fp = fingerprint(title, details)
@@ -472,11 +545,13 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
             )
             created += 1
             if state in {"READY", "TRIGGERED"}:
-                if upsert_order_pending(ticker, score, state):
+                if upsert_order_pending(ticker, score, state, entry_price):
                     orders_created += 1
         conn.commit()
     finally:
         conn.close()
+
+    closed_orders = auto_close_orders_from_signals(signals)
 
     save_autopilot_entry({
         "ts": now_iso(),
@@ -484,6 +559,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
         "assigned_to": assigned_to,
         "created_tasks": created,
         "created_orders": orders_created,
+        "closed_orders": closed_orders,
         "top_count": len(top),
     })
     return RedirectResponse(url=f"/?autopilot_created={created}", status_code=303)
