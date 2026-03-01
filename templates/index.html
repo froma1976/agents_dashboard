@@ -59,7 +59,7 @@
     .room-box{position:absolute;border:1px solid #35518a;border-radius:10px;padding:8px 10px;font-size:12px;color:#cfe0ff;background:#0f1a33dd;max-width:260px;line-height:1.35}
     .room-box .room-name{font-weight:700;color:#e6efff;display:block;margin-bottom:2px}
     .agent-bubble{position:absolute;min-width:140px;max-width:210px;padding:7px 11px;border-radius:999px;border:1px solid #4f6ea8;background:#12284acc;color:#dbe9ff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 0 rgba(56,189,248,.55);transition:all .8s ease;backdrop-filter:blur(4px)}
-    .agent-bubble.in-conclave{background:#153a22cc;border-color:#2f7a49}
+    .agent-bubble.in-conclave{background:#153a22cc;border-color:#2f7a49;white-space:normal;line-height:1.2;padding:6px 10px;border-radius:14px;max-width:180px}
     .agent-bubble.in-transit{background:#3b2c0acc;border-color:#9a7a2e}
     .office-legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
     .legend-item{font-size:12px;border:1px solid #2a3a5b;border-radius:999px;padding:4px 8px;color:#cfdcff;background:#0d162a}
@@ -823,6 +823,7 @@
         'devil-advocate-agent': 'Diego (Abogado del Diablo)',
       };
 
+      let conclaveIdx = 0;
       agents.forEach((a, idx) => {
         const bubble = document.createElement('div');
         bubble.className = 'agent-bubble';
@@ -832,12 +833,20 @@
         const txt = ((liveRow && liveRow.text) || '').toLowerCase();
         const transit = txt.includes('envi') || txt.includes('consenso');
         const conclave = inConclave.has(a.id);
-        const key = conclave ? 'conclave' : (anchors[a.id] ? a.id : 'alpha-scout');
-        const base = anchors[key] || [300,440];
-        const spread = conclave ? [idx*24, (idx%2)*18] : [0,0];
 
-        bubble.style.left = (base[0] + spread[0]) + 'px';
-        bubble.style.top = (base[1] + spread[1]) + 'px';
+        let x = (anchors[a.id] || anchors['alpha-scout'])[0];
+        let y = (anchors[a.id] || anchors['alpha-scout'])[1];
+
+        if (conclave) {
+          const col = conclaveIdx % 3;
+          const row = Math.floor(conclaveIdx / 3);
+          x = 225 + (col * 185);
+          y = 430 + (row * 40);
+          conclaveIdx += 1;
+        }
+
+        bubble.style.left = x + 'px';
+        bubble.style.top = y + 'px';
         bubble.textContent = agentNames[a.id] || a.id;
         if(conclave) bubble.classList.add('in-conclave');
         if(transit) bubble.classList.add('in-transit');
