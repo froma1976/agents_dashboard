@@ -4,7 +4,7 @@ import sqlite3
 import json
 import hashlib
 import subprocess
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -90,6 +90,9 @@ def init_db():
             ("created_at", "TEXT"),
             ("updated_at", "TEXT"),
             ("priority", "TEXT"),
+            ("start_at", "TEXT"),
+            ("due_at", "TEXT"),
+            ("next_check_at", "TEXT"),
         ]:
             if col not in existing:
                 conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} {ddl}")
@@ -397,7 +400,7 @@ def api_summary():
         "FROM token_usage GROUP BY model ORDER BY total DESC"
     )
     recent_tasks = q(
-        "SELECT task_id, status, assigned_by, assigned_to, title, details, priority, updated_at "
+        "SELECT task_id, status, assigned_by, assigned_to, title, details, priority, updated_at, start_at, due_at, next_check_at "
         "FROM tasks ORDER BY updated_at DESC LIMIT 20"
     )
     token_by_actor = q(
@@ -445,9 +448,9 @@ def create_task(
             task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
             ts = now_iso()
             cur.execute(
-                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                (task_id, title, details, "fernando", assigned_to, "pending", fp, "dashboard", ts, ts, priority),
+                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority,start_at,due_at,next_check_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, title, details, "fernando", assigned_to, "pending", fp, "dashboard", ts, ts, priority, ts, None, None),
             )
             conn.commit()
     finally:
@@ -596,10 +599,20 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
                 continue
             task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
             ts = now_iso()
+            # próximo ciclo aprox cada 15 minutos
+            now_dt = datetime.now(UTC)
+            mins = (now_dt.minute // 15 + 1) * 15
+            if mins >= 60:
+                next_dt = now_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            else:
+                next_dt = now_dt.replace(minute=mins, second=0, microsecond=0)
+            next_check = next_dt.isoformat(timespec="seconds").replace("+00:00", "Z")
+            due_at = (next_dt + timedelta(minutes=30)).isoformat(timespec="seconds").replace("+00:00", "Z")
+
             cur.execute(
-                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                (task_id, title, details, "autopilot", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta"),
+                "INSERT INTO tasks(task_id,title,details,assigned_by,assigned_to,status,fingerprint,source,created_at,updated_at,priority,start_at,due_at,next_check_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (task_id, title, details, "autopilot", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta", ts, due_at, next_check),
             )
             created += 1
             if state in {"READY", "TRIGGERED"}:

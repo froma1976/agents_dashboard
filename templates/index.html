@@ -552,7 +552,7 @@
       <div class="card col-12">
         <h2>Tareas de agentes (últimas)</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Prioridad</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th><th>Acciones</th></tr>
+          <tr><th>ID</th><th>Estado</th><th>Prioridad</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Cuándo la hará</th><th>Actualizado</th><th>Acciones</th></tr>
           {% for r in recent_tasks %}
             {% set conv = '-' %}
             {% if r.details and '[conviction:' in r.details %}
@@ -573,6 +573,17 @@
               <td>{{ r.assigned_to }}</td>
               <td>{{ r.title }}</td>
               <td>{{ conv }}</td>
+              <td>
+                {% if r.next_check_at %}
+                  próxima revisión: {{ r.next_check_at }}
+                {% elif r.due_at %}
+                  antes de: {{ r.due_at }}
+                {% elif r.start_at %}
+                  inicio previsto: {{ r.start_at }}
+                {% else %}
+                  en el próximo ciclo automático
+                {% endif %}
+              </td>
               <td>{{ r.updated_at }}</td>
               <td>
                 <form method="post" action="/tasks/status" style="display:flex;gap:6px;align-items:center">
@@ -590,7 +601,7 @@
               </td>
             </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="9">Sin datos</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="10">Sin datos</td></tr>{% endif %}
         </table>
       </div>
 
