@@ -453,36 +453,38 @@
 
     <div class="grid tab-section" data-tab="oportunidades">
       <div class="card col-12">
-        <h2>Top oportunidades (score MVP)</h2>
+        <h2>Top oportunidades (lectura simple)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Earnings</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>RelVol</th><th>Breakout20</th><th>5D %</th><th>20D %</th><th>Razones</th></tr>
+          <tr><th>Ticker</th><th>Estado</th><th>Confianza</th><th>Qué significa</th><th>Acción sugerida</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
+            {% set stx = o.state or 'WATCH' %}
+            {% set st_es = 'Vigilar' if stx=='WATCH' else ('Casi lista' if stx=='READY' else ('Lista para ejecutar' if stx=='TRIGGERED' else stx)) %}
+            {% set conf = o.score_final if o.score_final is not none else o.score %}
+            {% if stx == 'TRIGGERED' %}
+              {% set accion = 'Preparar ejecución simulada inmediata' %}
+            {% elif stx == 'READY' %}
+              {% set accion = 'Vigilar volumen y confirmación para entrar' %}
+            {% else %}
+              {% set accion = 'Esperar confirmación, no entrar aún' %}
+            {% endif %}
             <tr>
-              <td>{{ o.ticker }}</td>
-              {% set stx = o.state or 'WATCH' %}
-              <td><span class="badge {{ 'ok' if stx=='TRIGGERED' else ('warn' if stx=='READY' else 'no') }}">{{ '🟢 ' if stx=='TRIGGERED' else ('🟡 ' if stx=='READY' else '🔴 ') }}{{ stx }}</span></td>
-              <td>{{ o.earnings_label or 'No Data' }}</td>
-              <td><strong>{{ o.score_final if o.score_final is not none else o.score }}</strong></td>
-              <td>{{ o.score_tech if o.score_tech is not none else '-' }}</td>
-              <td>{{ o.score_asymmetry if o.score_asymmetry is not none else '-' }}</td>
-              <td>{{ o.score_macro_adj if o.score_macro_adj is not none else '-' }}</td>
-              <td>{{ o.score_social if o.score_social is not none else '-' }}</td>
-              <td>{{ o.convergence_count if o.convergence_count is not none else '-' }}</td>
-              <td>{{ o.rsi14 if o.rsi14 is not none else '-' }}</td>
-              <td>{{ o.ema20 if o.ema20 is not none else '-' }}</td>
-              <td>{{ o.ema50 if o.ema50 is not none else '-' }}</td>
-              <td>{{ o.rel_volume if o.rel_volume is not none else '-' }}</td>
-              <td>{{ 'Sí' if o.breakout_20 else 'No' }}</td>
-              <td>{{ o.chg_5d_pct if o.chg_5d_pct is not none else '-' }}</td>
-              <td>{{ o.chg_20d_pct if o.chg_20d_pct is not none else '-' }}</td>
-              <td>{{ (o.reasons or [])|join(', ') }}</td>
+              <td><strong>{{ o.ticker }}</strong></td>
+              <td><span class="badge {{ 'ok' if stx=='TRIGGERED' else ('warn' if stx=='READY' else 'no') }}">{{ '🟢 ' if stx=='TRIGGERED' else ('🟡 ' if stx=='READY' else '🔴 ') }}{{ st_es }}</span></td>
+              <td>{{ conf }}/100</td>
+              <td>
+                {% if o.earnings_label and o.earnings_label != 'No Data' %}{{ o.earnings_label }} · {% endif %}
+                {% if o.rel_volume and o.rel_volume >= 1.2 %}volumen fuerte{% else %}volumen normal{% endif %}
+                · {% if o.breakout_20 %}rompiendo máximos recientes{% else %}sin ruptura clara{% endif %}
+              </td>
+              <td>{{ accion }}</td>
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="17">Sin oportunidades calculadas todavía</td></tr>
+            <tr><td colspan="5">Sin oportunidades calculadas todavía</td></tr>
           {% endif %}
         </table>
+        <div class="muted" style="margin-top:8px">Tip: en modo experto puedes ver todos los indicadores técnicos detallados.</div>
       </div>
 
     </div>
