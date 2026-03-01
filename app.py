@@ -23,7 +23,7 @@ JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/works
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
-GPT53_MODE = os.getenv("GPT53_MODE", "ahorro").strip().lower()
+GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
 
 app = FastAPI(title="Agent Ops Dashboard")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
