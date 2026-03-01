@@ -31,6 +31,9 @@
     th,td{border-bottom:1px solid #2a3a5b;padding:8px;text-align:left}
     th{color:#b9c8ee;font-weight:600}
     .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
+    .ok{background:#133a22;color:#8ee6b0}
+    .no{background:#4b1f1f;color:#ffb4b4}
+    .warn{background:#3b2c0a;color:#ffd27a}
     .pending{background:#3b2c0a;color:#ffd27a}.running{background:#0c3147;color:#8ad4ff}
     .done{background:#133a22;color:#8ee6b0}.blocked{background:#4b1f1f;color:#ffb4b4}
     .cancelled{background:#374151;color:#d1d5db}
@@ -357,12 +360,12 @@
             {% set technical_ok = (o.score_tech or 0) >= 55 %}
             <tr>
               <td>{{ o.ticker }}</td>
-              <td>{{ 'OK' if macro_ok else 'NO' }}</td>
-              <td>{{ 'OK' if structural_ok else 'NO' }}</td>
-              <td>{{ 'OK' if capital_ok else 'NO' }}</td>
-              <td>{{ 'OK' if technical_ok else 'NO' }}</td>
-              <td>{{ o.convergence_count if o.convergence_count is not none else 0 }}/3</td>
-              <td><strong>{{ o.state or 'WATCH' }}</strong></td>
+              <td><span class="badge {{ 'ok' if macro_ok else 'no' }}">{{ 'OK' if macro_ok else 'NO' }}</span></td>
+              <td><span class="badge {{ 'ok' if structural_ok else 'no' }}">{{ 'OK' if structural_ok else 'NO' }}</span></td>
+              <td><span class="badge {{ 'ok' if capital_ok else 'no' }}">{{ 'OK' if capital_ok else 'NO' }}</span></td>
+              <td><span class="badge {{ 'ok' if technical_ok else 'no' }}">{{ 'OK' if technical_ok else 'NO' }}</span></td>
+              <td><span class="badge {{ 'ok' if (o.convergence_count or 0)>=3 else ('warn' if (o.convergence_count or 0)==2 else 'no') }}">{{ o.convergence_count if o.convergence_count is not none else 0 }}/3</span></td>
+              <td><span class="badge {{ 'ok' if (o.state or 'WATCH')=='TRIGGERED' else ('warn' if (o.state or 'WATCH')=='READY' else 'no') }}">{{ o.state or 'WATCH' }}</span></td>
             </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}<tr><td colspan="7">Sin datos de oportunidades</td></tr>{% endif %}
