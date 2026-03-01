@@ -643,10 +643,11 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
         social_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in (signals.get("social") or []))
         top_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in top)
 
-        register_token_usage(cur, "deterministic/rules", "macro-regime-agent", approx_tokens(market_blob) // 4, 80)
-        register_token_usage(cur, "deterministic/rules", "technical-structure-agent", approx_tokens(market_blob) // 2, 120)
-        register_token_usage(cur, "deterministic/rules", "social-sentiment-agent", approx_tokens(social_blob), 70)
-        register_token_usage(cur, "deterministic/rules", "catalyst-agent", approx_tokens(news_blob), 110)
+        register_token_usage(cur, "deterministic/rules", "macro-agent", approx_tokens(market_blob) // 4, 80)
+        register_token_usage(cur, "deterministic/rules", "technical-agent", approx_tokens(market_blob) // 2, 120)
+        register_token_usage(cur, "deterministic/rules", "news-catalyst-agent", approx_tokens(news_blob), 110)
+        register_token_usage(cur, "deterministic/rules", "risk-exec-agent", approx_tokens(social_blob), 70)
+        register_token_usage(cur, "deterministic/rules", "devil-advocate-agent", approx_tokens(top_blob), 95)
         register_token_usage(cur, "deterministic/rules", assigned_to, approx_tokens(top_blob), 140 + created * 25)
 
         conn.commit()
