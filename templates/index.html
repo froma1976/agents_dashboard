@@ -405,20 +405,23 @@
       </div>
 
       <div class="card col-12">
-        <h2>Piloto automático</h2>
-        <p class="muted">Funciona solo por cron. El botón es solo de prueba/manual.</p>
-        <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-          <label class="muted">Ejecutar ahora con score ≥</label>
-          <input name="threshold" type="number" min="0" max="100" value="60" style="width:90px;padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
-          <input name="assigned_to" value="alpha-scout" style="padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
-          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Ejecutar piloto automático</button>
-        </form>
-        <table>
-          <tr><th>Hora</th><th>Umbral</th><th>Agente</th><th>Top vistos</th><th>Tareas</th><th>Órdenes nuevas</th><th>Órdenes cerradas</th></tr>
-          {% for a in autopilot_log[:8] %}
-            <tr><td>{{ a.ts }}</td><td>{{ a.threshold }}</td><td>{{ a.assigned_to }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td><td>{{ a.created_orders or 0 }}</td><td>{{ a.closed_orders or 0 }}</td></tr>
+        <h2>Qué está haciendo cada agente ahora (en directo)</h2>
+        <ul style="margin:0;padding-left:18px;line-height:1.8">
+          {% for a in agent_live %}
+            <li>{{ a.text }}</li>
           {% endfor %}
-          {% if autopilot_log|length == 0 %}<tr><td colspan="7">Sin ejecuciones todavía</td></tr>{% endif %}
+          {% if agent_live|length == 0 %}<li>Sin estado en directo todavía.</li>{% endif %}
+        </ul>
+      </div>
+
+      <div class="card col-12">
+        <h2>Actividad automática reciente (solo lectura)</h2>
+        <table>
+          <tr><th>Hora</th><th>Top vistos</th><th>Tareas</th><th>Órdenes nuevas</th><th>Órdenes cerradas</th></tr>
+          {% for a in autopilot_log[:8] %}
+            <tr><td>{{ a.ts }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td><td>{{ a.created_orders or 0 }}</td><td>{{ a.closed_orders or 0 }}</td></tr>
+          {% endfor %}
+          {% if autopilot_log|length == 0 %}<tr><td colspan="5">Sin actividad automática todavía</td></tr>{% endif %}
         </table>
       </div>
 

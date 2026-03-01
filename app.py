@@ -579,6 +579,29 @@ def home(request: Request):
     agents_runtime = load_agents_runtime()
     agents_health = load_agents_health()
     orders = load_orders()
+
+    # Estado "en directo" por agente (lenguaje natural)
+    agent_live = []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        for a in agents_runtime:
+            aid = a.get("id")
+            row = cur.execute(
+                "SELECT status,title,updated_at FROM tasks WHERE assigned_to=? ORDER BY updated_at DESC LIMIT 1",
+                (aid,),
+            ).fetchone()
+            if row:
+                st = row["status"]
+                st_es = "en curso" if st == "running" else ("pendiente" if st == "pending" else ("hecha" if st == "done" else ("bloqueada" if st == "blocked" else st)))
+                text = f"{aid}: ahora está {st_es} con '{row['title']}' (actualizado {row['updated_at']})"
+            else:
+                text = f"{aid}: sin tarea reciente, en espera de señales nuevas"
+            agent_live.append({"agent": aid, "text": text})
+        conn.close()
+    except Exception:
+        pass
     pending_orders = orders.get("pending", [])
     completed_orders = orders.get("completed", [])
     journal = load_journal()
@@ -640,6 +663,7 @@ def home(request: Request):
             "autopilot_log": autopilot_log,
             "agents_runtime": agents_runtime,
             "agents_health": agents_health,
+            "agent_live": agent_live,
             "orders_pending": pending_orders,
             "orders_completed": completed_orders,
             "orders_kpi": {
