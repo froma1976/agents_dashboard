@@ -58,9 +58,15 @@
     .office-map{position:relative;height:520px;border:1px solid #2a3a5b;border-radius:14px;background:linear-gradient(180deg,#0a1224,#0a1020);overflow:hidden}
     .room-box{position:absolute;border:1px solid #35518a;border-radius:10px;padding:8px 10px;font-size:12px;color:#cfe0ff;background:#0f1a33dd;max-width:260px;line-height:1.35}
     .room-box .room-name{font-weight:700;color:#e6efff;display:block;margin-bottom:2px}
-    .agent-bubble{position:absolute;min-width:120px;max-width:170px;padding:6px 10px;border-radius:999px;border:1px solid #4f6ea8;background:#12284acc;color:#dbe9ff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 0 rgba(56,189,248,.55);transition:all .8s ease}
+    .agent-bubble{position:absolute;min-width:140px;max-width:210px;padding:7px 11px;border-radius:999px;border:1px solid #4f6ea8;background:#12284acc;color:#dbe9ff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 0 rgba(56,189,248,.55);transition:all .8s ease;backdrop-filter:blur(4px)}
     .agent-bubble.in-conclave{background:#153a22cc;border-color:#2f7a49}
     .agent-bubble.in-transit{background:#3b2c0acc;border-color:#9a7a2e}
+    .office-legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
+    .legend-item{font-size:12px;border:1px solid #2a3a5b;border-radius:999px;padding:4px 8px;color:#cfdcff;background:#0d162a}
+    .chat-log{margin-top:10px;border:1px solid #2a3a5b;border-radius:12px;background:linear-gradient(180deg,#0b1222,#0a1020);padding:10px;max-height:340px;overflow:auto;font-size:13px;line-height:1.55}
+    .chat-row{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
+    .chat-time{color:#93a4c9;font-size:12px;min-width:50px}
+    .chat-msg{padding:7px 10px;border-radius:10px;border:1px solid #2a3a5b;background:#111b31;max-width:100%}
     @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.55)}70%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
     body.expert .expert-only{display:inline-flex}
     .simple-note{display:inline-flex}
@@ -78,6 +84,8 @@
       .kpi .v{font-size:22px}
       th,td{padding:7px;font-size:12px}
       .foot{font-size:11px}
+      .office-map{height:620px}
+      .agent-bubble{min-width:120px;max-width:160px;font-size:11px}
     }
   </style>
 </head>
@@ -404,6 +412,11 @@
       <div class="card col-12">
         <h2>🏢 Oficina viva de agentes</h2>
         <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. Los puntos se mueven entre despachos y sala común.</p>
+        <div class="office-legend">
+          <span class="legend-item">🔵 En despacho</span>
+          <span class="legend-item">🟠 En tránsito</span>
+          <span class="legend-item">🟢 En cónclave</span>
+        </div>
         <div class="office-map" id="officeMap">
           <div class="room-box" style="left:16px;top:16px">
             <span class="room-name">Macro</span>
@@ -443,7 +456,7 @@
           <div class="muted">Diálogo narrativo entre agentes, actualizado automáticamente.</div>
           <div id="conclaveCount" class="muted" style="margin-top:6px">Agentes reunidos en cónclave: calculando...</div>
         </div>
-        <div id="agentChatLog" style="margin-top:10px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222;padding:10px;max-height:300px;overflow:auto;font-size:13px;line-height:1.55"></div>
+        <div id="agentChatLog" class="chat-log"></div>
       </div>
     </div>
 
@@ -837,7 +850,7 @@
       if (logEl) {
         const lines = [];
         const hhmm = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        const say = (who, msg) => lines.push(`<div><span style="color:#93a4c9">[${hhmm}]</span> <strong>${who}:</strong> ${msg}</div>`);
+        const say = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> ${msg}</div></div>`);
 
         if (top) {
           say(agentNames['macro-agent'], 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
