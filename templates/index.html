@@ -45,12 +45,12 @@
   <div class="wrap">
     <div class="top">
       <div>
-        <h1>📊 Agent Ops Dashboard</h1>
-        <div class="muted">Control centralizado de tareas, cron y consumo de tokens</div>
+        <h1>📊 Dashboard Cerebro de Agentes</h1>
+        <div class="muted">Control centralizado de tareas, cron, señales y cartera</div>
       </div>
       <div class="right">
-        <div class="pill"><span class="dot"></span>online</div>
-        <div class="pill">auto-refresh: 10s</div>
+        <div class="pill"><span class="dot"></span>en línea</div>
+        <div class="pill">auto-actualización: 10s</div>
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
           <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
@@ -145,7 +145,7 @@
           <div class="col-12" style="grid-column: span 12;">
             <h2>Señal social web (Stocktwits)</h2>
             <table>
-              <tr><th>Symbol</th><th>Mensajes</th><th>Bullish</th><th>Bearish</th><th>Score Sentimiento</th></tr>
+              <tr><th>Símbolo</th><th>Mensajes</th><th>Bullish</th><th>Bearish</th><th>Score Sentimiento</th></tr>
               {% for s in signals.social[:8] %}
                 <tr>
                   <td>{{ s.symbol }}</td>
@@ -160,6 +160,25 @@
               {% endif %}
             </table>
           </div>
+
+          <div class="col-12" style="grid-column: span 12;">
+            <h2>Earnings calendar (gratis)</h2>
+            <table>
+              <tr><th>Símbolo</th><th>Fuente</th><th>Fecha</th><th>EPS Est.</th><th>EPS Real</th><th>Revenue Est.</th><th>Revenue Real</th></tr>
+              {% for e in signals.earnings[:12] %}
+                <tr>
+                  <td>{{ e.symbol }}</td><td>{{ e.source }}</td><td>{{ e.date or '-' }}</td>
+                  <td>{{ e.eps_estimate if e.eps_estimate is not none else '-' }}</td>
+                  <td>{{ e.eps_actual if e.eps_actual is not none else '-' }}</td>
+                  <td>{{ e.revenue_estimate if e.revenue_estimate is not none else '-' }}</td>
+                  <td>{{ e.revenue_actual if e.revenue_actual is not none else '-' }}</td>
+                </tr>
+              {% endfor %}
+              {% if signals.earnings is not defined or signals.earnings|length == 0 %}
+                <tr><td colspan="7">Sin datos de earnings (faltan API keys o no hay eventos hoy)</td></tr>
+              {% endif %}
+            </table>
+          </div>
         </div>
       </div>
 
@@ -169,10 +188,10 @@
           <label class="muted">Ejecutar autopilot con score ≥</label>
           <input name="threshold" type="number" min="0" max="100" value="60" style="width:90px;padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           <input name="assigned_to" value="alpha-scout" style="padding:8px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
-          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Run Autopilot</button>
+          <button type="submit" style="padding:8px 12px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Ejecutar piloto automático</button>
         </form>
         <table>
-          <tr><th>Hora</th><th>Threshold</th><th>Agente</th><th>Top vistos</th><th>Tareas creadas</th></tr>
+          <tr><th>Hora</th><th>Umbral</th><th>Agente</th><th>Top vistos</th><th>Tareas creadas</th></tr>
           {% for a in autopilot_log[:8] %}
             <tr><td>{{ a.ts }}</td><td>{{ a.threshold }}</td><td>{{ a.assigned_to }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td></tr>
           {% endfor %}
@@ -183,7 +202,7 @@
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Score Final</th><th>Tech</th><th>Asym</th><th>MacroAdj</th><th>Social</th><th>Conv</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
+          <tr><th>Ticker</th><th>Estado</th><th>Score final</th><th>Técnico</th><th>Asimetría</th><th>Ajuste macro</th><th>Social</th><th>Convergencia</th><th>RSI14</th><th>EMA20</th><th>EMA50</th><th>5D %</th><th>20D %</th><th>Razones</th><th>Acción</th></tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
             <tr>
