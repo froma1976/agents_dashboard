@@ -55,6 +55,11 @@
     .pulse{animation:pulse 1.2s infinite}
     .conclave{margin-top:12px;padding:10px;border:1px dashed #3e5f98;border-radius:12px;background:linear-gradient(180deg,#101a31,#0c1426)}
     .conclave-title{font-weight:700;color:#d6e5ff;margin-bottom:6px}
+    .office-map{position:relative;height:340px;border:1px solid #2a3a5b;border-radius:14px;background:linear-gradient(180deg,#0a1224,#0a1020);overflow:hidden}
+    .room-box{position:absolute;border:1px solid #35518a;border-radius:10px;padding:6px 8px;font-size:12px;color:#cfe0ff;background:#0f1a33aa}
+    .agent-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:#38bdf8;box-shadow:0 0 0 0 rgba(56,189,248,.55);transition:all .8s ease}
+    .agent-dot.in-conclave{background:#22c55e}
+    .agent-dot.in-transit{background:#f59e0b}
     @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.55)}70%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
     body.expert .expert-only{display:inline-flex}
     .simple-note{display:inline-flex}
@@ -397,18 +402,15 @@
     <div class="grid tab-section" data-tab="oficina">
       <div class="card col-12">
         <h2>🏢 Oficina viva de agentes</h2>
-        <p class="muted">Vista narrativa en tiempo real. Cada agente trabaja en su despacho y, al final, pasa por el cónclave para decidir.</p>
-        <div class="office-grid">
-          {% for a in agents_runtime %}
-            {% set live = (agent_live | selectattr('agent','equalto',a.id) | list | first) %}
-            {% set txt = live.text if live else ('Esperando siguiente ciclo automático') %}
-            {% set active = ('trabajando' in (txt|lower)) or ('analizando' in (txt|lower)) %}
-            <div class="room">
-              <h3>{{ a.id }}</h3>
-              <div class="agent-chip {% if active %}pulse{% endif %}">{{ '🟢 En acción' if active else '⚪ En espera' }}</div>
-              <p style="margin:8px 0 0">{{ txt }}</p>
-            </div>
-          {% endfor %}
+        <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. Los puntos se mueven entre despachos y sala común.</p>
+        <div class="office-map" id="officeMap">
+          <div class="room-box" style="left:12px;top:12px">Macro</div>
+          <div class="room-box" style="left:190px;top:12px">Noticias</div>
+          <div class="room-box" style="left:368px;top:12px">Técnico</div>
+          <div class="room-box" style="left:12px;top:120px">Riesgo</div>
+          <div class="room-box" style="left:190px;top:120px">Abogado del Diablo</div>
+          <div class="room-box" style="left:368px;top:120px">Alpha Scout</div>
+          <div class="room-box" style="left:160px;top:245px">🧠 Cónclave</div>
         </div>
       </div>
 
@@ -750,6 +752,49 @@
         <line x1="${pad}" y1="${baseY}" x2="${w-pad}" y2="${baseY}" stroke="#35518a" stroke-dasharray="4 4" />
         <polyline points="${pts}" fill="none" stroke="#8ad4ff" stroke-width="2.5" />
       `;
+    })();
+
+    // Oficina viva (movimiento entre salas)
+    (function(){
+      const map = document.getElementById('officeMap');
+      if(!map) return;
+      const agents = {{ agents_runtime|tojson }};
+      const live = {{ agent_live|tojson }};
+      const topOps = {{ (signals.top_opportunities if signals.top_opportunities is defined else [])|tojson }};
+      const hasConclave = Array.isArray(topOps) && topOps.length > 0;
+
+      const anchors = {
+        'macro-agent':[35,42],
+        'news-catalyst-agent':[215,42],
+        'technical-agent':[392,42],
+        'risk-exec-agent':[35,150],
+        'devil-advocate-agent':[215,150],
+        'alpha-scout':[392,150],
+        'conclave':[220,278],
+      };
+
+      const inConclave = hasConclave ? new Set(['alpha-scout','devil-advocate-agent','macro-agent','news-catalyst-agent']) : new Set();
+
+      agents.forEach((a, idx) => {
+        const dot = document.createElement('div');
+        dot.className = 'agent-dot';
+        dot.title = a.id;
+
+        const liveRow = (live || []).find(x => x.agent === a.id);
+        const txt = ((liveRow && liveRow.text) || '').toLowerCase();
+        const transit = txt.includes('envi') || txt.includes('consenso');
+        const conclave = inConclave.has(a.id);
+        const key = conclave ? 'conclave' : (anchors[a.id] ? a.id : 'alpha-scout');
+        const base = anchors[key] || [220,278];
+        const spread = conclave ? [idx*16, (idx%2)*14] : [0,0];
+
+        dot.style.left = (base[0] + spread[0]) + 'px';
+        dot.style.top = (base[1] + spread[1]) + 'px';
+        if(conclave) dot.classList.add('in-conclave');
+        if(transit) dot.classList.add('in-transit');
+
+        map.appendChild(dot);
+      });
     })();
 
     setTimeout(() => location.reload(), 30000);
