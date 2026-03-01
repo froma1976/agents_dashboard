@@ -43,6 +43,10 @@
     .tab-btn.active{background:#1d3b72;border-color:#35518a;color:#fff}
     .tab-section{display:none}
     .tab-section.active{display:grid}
+    .expert-only{display:none}
+    body.expert .expert-only{display:inline-flex}
+    .simple-note{display:inline-flex}
+    body.expert .simple-note{display:none}
     @media (max-width:960px){.col-3,.col-4,.col-6,.col-8{grid-column:span 12}}
   </style>
 </head>
@@ -73,12 +77,28 @@
       <button class="tab-btn active" data-tab-btn="inicio">Inicio</button>
       <button class="tab-btn" data-tab-btn="oportunidades">Oportunidades</button>
       <button class="tab-btn" data-tab-btn="cartera">Cartera</button>
-      <button class="tab-btn" data-tab-btn="agentes">Agentes</button>
-      <button class="tab-btn" data-tab-btn="fuentes">Fuentes</button>
-      <button class="tab-btn" data-tab-btn="tecnico">Avanzado</button>
+      <button class="tab-btn expert-only" data-tab-btn="agentes">Agentes</button>
+      <button class="tab-btn expert-only" data-tab-btn="fuentes">Fuentes</button>
+      <button class="tab-btn expert-only" data-tab-btn="tecnico">Avanzado</button>
+      <span class="pill simple-note">Modo cliente activo</span>
+      <button id="modeToggle" class="tab-btn" type="button">Modo experto: OFF</button>
     </div>
 
     <div class="grid tab-section active" data-tab="inicio">
+      <div class="card col-12">
+        <h2>Qué hacer hoy (resumen simple)</h2>
+        {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
+        {% set top = top_ops[0] if top_ops|length > 0 else None %}
+        <p>
+          {% if top %}
+            Mejor oportunidad actual: <strong>{{ top.ticker }}</strong> (estado: <strong>{{ top.state or 'WATCH' }}</strong>, score: <strong>{{ top.score_final or top.score }}</strong>). 
+            Acción sugerida: <strong>{% if (top.state or 'WATCH') == 'TRIGGERED' %}ejecución simulada{% elif (top.state or 'WATCH') == 'READY' %}vigilar de cerca{% else %}esperar confirmación{% endif %}</strong>.
+          {% else %}
+            Sin oportunidades claras ahora. Acción sugerida: esperar actualización.
+          {% endif %}
+        </p>
+      </div>
+
       <div class="card col-3 kpi"><div class="l">Total tareas</div><div class="v">{{ total_tasks }}</div></div>
       <div class="card col-3 kpi"><div class="l">Modelos activos</div><div class="v">{{ total_models }}</div></div>
       <div class="card col-3 kpi"><div class="l">Tokens acumulados</div><div class="v">{{ total_tokens }}</div></div>
@@ -474,6 +494,12 @@
     const savedTab = localStorage.getItem('dashboard_active_tab') || 'inicio';
     activateTab(savedTab);
 
+    const body = document.body;
+    const modeBtn = document.getElementById('modeToggle');
+    const expertMode = localStorage.getItem('dashboard_expert_mode') === '1';
+    if(expertMode){ body.classList.add('expert'); }
+    if(modeBtn){ modeBtn.textContent = `Modo experto: ${body.classList.contains('expert') ? 'ON' : 'OFF'}`; }
+
     btns.forEach(b => {
       b.addEventListener('click', () => {
         const target = b.getAttribute('data-tab-btn');
@@ -481,6 +507,18 @@
         activateTab(target);
       });
     });
+
+    if(modeBtn){
+      modeBtn.addEventListener('click', () => {
+        body.classList.toggle('expert');
+        localStorage.setItem('dashboard_expert_mode', body.classList.contains('expert') ? '1' : '0');
+        modeBtn.textContent = `Modo experto: ${body.classList.contains('expert') ? 'ON' : 'OFF'}`;
+        if(!body.classList.contains('expert')){
+          activateTab('inicio');
+          localStorage.setItem('dashboard_active_tab','inicio');
+        }
+      });
+    }
 
     setTimeout(() => location.reload(), 30000);
   </script>
