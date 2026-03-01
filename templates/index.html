@@ -55,7 +55,7 @@
       </div>
       <div class="right">
         <div class="pill"><span class="dot"></span>en línea</div>
-        <div class="pill">auto-actualización: 10s</div>
+        <div class="pill">auto-actualización: 30s</div>
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
           <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
@@ -94,7 +94,14 @@
         <table>
           <tr><th>Estado</th><th>Cantidad</th></tr>
           {% for r in task_counts %}
-            <tr><td><span class="badge {{ r.status }}">{{ r.status }}</span></td><td>{{ r.c }}</td></tr>
+            {% set st = r.status %}
+            {% if st == 'pending' %}{% set st_es = 'pendiente' %}
+            {% elif st == 'running' %}{% set st_es = 'en curso' %}
+            {% elif st == 'done' %}{% set st_es = 'hecha' %}
+            {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
+            {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+            {% else %}{% set st_es = st %}{% endif %}
+            <tr><td><span class="badge {{ r.status }}">{{ st_es }}</span></td><td>{{ r.c }}</td></tr>
           {% endfor %}
           {% if task_counts|length == 0 %}<tr><td colspan="2">Sin datos</td></tr>{% endif %}
         </table>
@@ -108,6 +115,30 @@
             <tr><td>{{ r.model }}</td><td>{{ r.tin or 0 }}</td><td>{{ r.tout or 0 }}</td><td>{{ r.total or 0 }}</td></tr>
           {% endfor %}
           {% if token_by_model|length == 0 %}<tr><td colspan="4">Sin datos</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Tareas de agentes (resumen rápido)</h2>
+        <table>
+          <tr><th>ID</th><th>Estado</th><th>Agente</th><th>Título</th><th>Actualizado</th></tr>
+          {% for r in recent_tasks[:8] %}
+            {% set st = r.status %}
+            {% if st == 'pending' %}{% set st_es = 'pendiente' %}
+            {% elif st == 'running' %}{% set st_es = 'en curso' %}
+            {% elif st == 'done' %}{% set st_es = 'hecha' %}
+            {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
+            {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+            {% else %}{% set st_es = st %}{% endif %}
+            <tr>
+              <td>{{ r.task_id }}</td>
+              <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
+              <td>{{ r.assigned_to }}</td>
+              <td>{{ r.title }}</td>
+              <td>{{ r.updated_at }}</td>
+            </tr>
+          {% endfor %}
+          {% if recent_tasks|length == 0 %}<tr><td colspan="5">Sin tareas todavía</td></tr>{% endif %}
         </table>
       </div>
 
@@ -310,7 +341,7 @@
       </div>
 
       <div class="card col-12">
-        <h2>Últimas tareas</h2>
+        <h2>Tareas de agentes (últimas)</h2>
         <table>
           <tr><th>ID</th><th>Estado</th><th>Prioridad</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Actualizado</th><th>Acciones</th></tr>
           {% for r in recent_tasks %}
@@ -320,7 +351,14 @@
             {% endif %}
             <tr>
               <td>{{ r.task_id }}</td>
-              <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+              {% set st = r.status %}
+              {% if st == 'pending' %}{% set st_es = 'pendiente' %}
+              {% elif st == 'running' %}{% set st_es = 'en curso' %}
+              {% elif st == 'done' %}{% set st_es = 'hecha' %}
+              {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
+              {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+              {% else %}{% set st_es = st %}{% endif %}
+              <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
               <td>{{ r.priority or 'media' }}</td>
               <td>{{ r.assigned_by }}</td>
               <td>{{ r.assigned_to }}</td>
@@ -330,9 +368,9 @@
               <td>
                 <form method="post" action="/tasks/status" style="display:flex;gap:6px;flex-wrap:wrap">
                   <input type="hidden" name="task_id" value="{{ r.task_id }}" />
-                  <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Running</button>
-                  <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Done</button>
-                  <button name="status" value="blocked" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#4b1f1f;color:#ffb4b4;cursor:pointer">Blocked</button>
+                  <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">En curso</button>
+                  <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Hecha</button>
+                  <button name="status" value="blocked" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#4b1f1f;color:#ffb4b4;cursor:pointer">Bloqueada</button>
                 </form>
               </td>
             </tr>
@@ -364,20 +402,31 @@
   </div>
   <script>
     document.getElementById('ts').textContent = new Date().toLocaleString();
-    setTimeout(() => location.reload(), 10000);
 
     const btns = document.querySelectorAll('[data-tab-btn]');
     const tabs = document.querySelectorAll('[data-tab]');
+
+    function activateTab(name){
+      btns.forEach(x => x.classList.remove('active'));
+      tabs.forEach(t => t.classList.remove('active'));
+      const btn = document.querySelector(`[data-tab-btn="${name}"]`);
+      const pane = document.querySelector(`[data-tab="${name}"]`);
+      if(btn) btn.classList.add('active');
+      if(pane) pane.classList.add('active');
+    }
+
+    const savedTab = localStorage.getItem('dashboard_active_tab') || 'inicio';
+    activateTab(savedTab);
+
     btns.forEach(b => {
       b.addEventListener('click', () => {
         const target = b.getAttribute('data-tab-btn');
-        btns.forEach(x => x.classList.remove('active'));
-        tabs.forEach(t => t.classList.remove('active'));
-        b.classList.add('active');
-        const pane = document.querySelector(`[data-tab="${target}"]`);
-        if (pane) pane.classList.add('active');
+        localStorage.setItem('dashboard_active_tab', target);
+        activateTab(target);
       });
     });
+
+    setTimeout(() => location.reload(), 30000);
   </script>
 </body>
 </html>
