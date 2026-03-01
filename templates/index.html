@@ -38,6 +38,11 @@
     .pill{border:1px solid var(--line);padding:5px 10px;border-radius:999px;font-size:12px;color:#c7d4f5}
     .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--ok);margin-right:6px}
     .foot{margin-top:10px;font-size:12px;color:var(--muted)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+    .tab-btn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1423;color:#c7d4f5;cursor:pointer}
+    .tab-btn.active{background:#1d3b72;border-color:#35518a;color:#fff}
+    .tab-section{display:none}
+    .tab-section.active{display:grid}
     @media (max-width:960px){.col-3,.col-4,.col-6,.col-8{grid-column:span 12}}
   </style>
 </head>
@@ -64,7 +69,16 @@
     {% set total_tokens = 0 %}
     {% for r in token_by_model %}{% set total_tokens = total_tokens + (r.total or 0) %}{% endfor %}
 
-    <div class="grid">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab-btn="inicio">Inicio</button>
+      <button class="tab-btn" data-tab-btn="oportunidades">Oportunidades</button>
+      <button class="tab-btn" data-tab-btn="cartera">Cartera</button>
+      <button class="tab-btn" data-tab-btn="agentes">Agentes</button>
+      <button class="tab-btn" data-tab-btn="fuentes">Fuentes</button>
+      <button class="tab-btn" data-tab-btn="tecnico">Técnico</button>
+    </div>
+
+    <div class="grid tab-section active" data-tab="inicio">
       <div class="card col-3 kpi"><div class="l">Total tareas</div><div class="v">{{ total_tasks }}</div></div>
       <div class="card col-3 kpi"><div class="l">Modelos activos</div><div class="v">{{ total_models }}</div></div>
       <div class="card col-3 kpi"><div class="l">Tokens acumulados</div><div class="v">{{ total_tokens }}</div></div>
@@ -108,6 +122,25 @@
         </table>
       </div>
 
+    </div>
+
+    <div class="grid tab-section" data-tab="cartera">
+      <div class="card col-12">
+        <h2>Cartera (USD) — vista simple</h2>
+        <table>
+          <tr><th>Capital inicial</th><th>Cash</th><th>Valor posiciones</th><th>Equity</th><th>Nº posiciones</th></tr>
+          <tr>
+            <td>{{ portfolio.capital_initial_usd if portfolio.capital_initial_usd is not none else '-' }}</td>
+            <td>{{ '%.2f'|format(portfolio_cash_usd) }}</td>
+            <td>{{ '%.2f'|format(portfolio_market_value_usd) }}</td>
+            <td>{{ '%.2f'|format(portfolio_equity_usd) }}</td>
+            <td>{{ portfolio_positions|length }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid tab-section" data-tab="fuentes">
       <div class="card col-12">
         <h2>Señales gratis (snapshot)</h2>
         <div class="muted" style="margin-bottom:8px">Generado: {{ signals.generated_at or 'N/D' }} {% if signals_stale %}<span style="color:#ffb4b4">(desactualizado)</span>{% endif %}</div>
@@ -182,6 +215,9 @@
         </div>
       </div>
 
+    </div>
+
+    <div class="grid tab-section" data-tab="agentes">
       <div class="card col-12">
         <h2>Autopilot del agente (detección → tarea automática)</h2>
         <form method="post" action="/autopilot/run" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
@@ -199,6 +235,9 @@
         </table>
       </div>
 
+    </div>
+
+    <div class="grid tab-section" data-tab="oportunidades">
       <div class="card col-12">
         <h2>Top oportunidades (score MVP)</h2>
         <table>
@@ -240,6 +279,9 @@
         </table>
       </div>
 
+    </div>
+
+    <div class="grid tab-section" data-tab="tecnico">
       <div class="card col-12">
         <h2>Override manual (solo si quieres forzar una tarea)</h2>
         <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
@@ -323,6 +365,19 @@
   <script>
     document.getElementById('ts').textContent = new Date().toLocaleString();
     setTimeout(() => location.reload(), 10000);
+
+    const btns = document.querySelectorAll('[data-tab-btn]');
+    const tabs = document.querySelectorAll('[data-tab]');
+    btns.forEach(b => {
+      b.addEventListener('click', () => {
+        const target = b.getAttribute('data-tab-btn');
+        btns.forEach(x => x.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+        b.classList.add('active');
+        const pane = document.querySelector(`[data-tab="${target}"]`);
+        if (pane) pane.classList.add('active');
+      });
+    });
   </script>
 </body>
 </html>
