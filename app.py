@@ -216,12 +216,35 @@ def system_status():
     except Exception:
         backup_m = None
 
-    ok = (snap_m is not None and snap_m <= 20) and (auto_m is not None and auto_m <= 30)
-    status = "OPERATIVO" if ok else "REVISAR"
-    color = "ok" if ok else "no"
+    ok_core = (snap_m is not None and snap_m <= 20) and (auto_m is not None and auto_m <= 30)
+    llm_ok = True
+    try:
+        hs = load_agents_health()
+        llm_rows = [h for h in hs if isinstance(h, dict) and str(h.get("model", "")).startswith("ollama/")]
+        if llm_rows and not all(bool(h.get("ok")) for h in llm_rows):
+            llm_ok = False
+    except Exception:
+        llm_ok = False
+
+    degraded = ok_core and (not llm_ok)
+    if ok_core and llm_ok:
+        status = "OPERATIVO"
+        color = "ok"
+        mode = "NORMAL"
+    elif degraded:
+        status = "OPERATIVO"
+        color = "warn"
+        mode = "DEGRADADO"
+    else:
+        status = "REVISAR"
+        color = "no"
+        mode = "DEGRADADO"
+
     return {
         "status": status,
         "color": color,
+        "mode": mode,
+        "llm_ok": llm_ok,
         "snapshot_min": snap_m,
         "autopilot_min": auto_m,
         "backup_min": backup_m,
