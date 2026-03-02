@@ -4,9 +4,11 @@ import sqlite3
 import json
 import hashlib
 import subprocess
+import urllib.request
+import urllib.parse
 from datetime import datetime, UTC, timedelta
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -490,6 +492,69 @@ def api_summary():
         "portfolio": portfolio,
         "gpt53_budget": gpt53_budget,
     }
+
+
+@app.get("/api/analysis/{ticker}")
+def api_analysis(ticker: str):
+    tkr = (ticker or "").upper().strip()
+    signals = load_signals_snapshot()
+    market = signals.get("market", []) if isinstance(signals, dict) else []
+    row = next((m for m in market if isinstance(m, dict) and str(m.get("ticker", "")).upper() == tkr), None)
+    top = next((m for m in (signals.get("top_opportunities", []) if isinstance(signals, dict) else []) if str(m.get("ticker", "")).upper() == tkr), None)
+
+    orders = load_orders()
+    ord_row = next((o for o in (orders.get("pending", []) or []) if str(o.get("ticker", "")).upper() == tkr), None)
+
+    price = None
+    try:
+        price = float((row or {}).get("regularMarketPrice") or (row or {}).get("lastCloseSeries"))
+    except Exception:
+        pass
+
+    # vela simple desde Yahoo (últimas 60)
+    candles = []
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(tkr)}?range=3mo&interval=1d"
+        req = urllib.request.Request(url, headers={"User-Agent": "agent-ops-dashboard/1.0"})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            data = json.loads(r.read().decode("utf-8", errors="ignore"))
+        res = (((data or {}).get("chart") or {}).get("result") or [{}])[0]
+        ts = res.get("timestamp") or []
+        q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
+        o = q.get("open") or []
+        h = q.get("high") or []
+        l = q.get("low") or []
+        c = q.get("close") or []
+        for i in range(max(0, len(ts) - 60), len(ts)):
+            if i < len(o) and i < len(h) and i < len(l) and i < len(c) and None not in (o[i], h[i], l[i], c[i]):
+                candles.append({"t": int(ts[i]), "o": float(o[i]), "h": float(h[i]), "l": float(l[i]), "c": float(c[i])})
+    except Exception:
+        pass
+
+    reasons = (top or {}).get("reasons") or []
+    contra = (top or {}).get("argumento_en_contra") or "Sin objeción crítica detectada"
+    decision = (top or {}).get("decision_final") or "HOLD"
+    confidence = (top or {}).get("confidence_pct") or (top or {}).get("score_final") or (row or {}).get("score") or 0
+    bubble = (top or {}).get("bubble_level") or "Bajo"
+
+    narrativa = (
+        f"{tkr}: confianza {confidence}%, burbuja {bubble}. "
+        f"Señales a favor: {', '.join(reasons[:4]) if reasons else 'sin señales fuertes'}. "
+        f"Principal objeción: {contra}. Decisión actual: {decision}."
+    )
+
+    return JSONResponse({
+        "ticker": tkr,
+        "price": price,
+        "entry_price": (ord_row or {}).get("entry_price"),
+        "target_price": (ord_row or {}).get("target_price"),
+        "stop_price": (ord_row or {}).get("stop_price"),
+        "decision": decision,
+        "confidence": confidence,
+        "bubble": bubble,
+        "narrativa": narrativa,
+        "candles": candles,
+    })
 
 
 @app.post("/tasks/create")

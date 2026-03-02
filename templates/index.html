@@ -69,6 +69,8 @@
     .chat-row{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
     .chat-time{color:#93a4c9;font-size:12px;min-width:50px}
     .chat-msg{padding:7px 10px;border-radius:10px;border:1px solid #2a3a5b;background:#111b31;max-width:100%}
+    .modal-backdrop{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:9999}
+    .modal{width:min(980px,95vw);max-height:90vh;overflow:auto;background:#0d1423;border:1px solid #35518a;border-radius:14px;padding:14px}
     @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.55)}70%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
     body.expert .expert-only{display:inline-flex}
     .simple-note{display:inline-flex}
@@ -309,7 +311,7 @@
             {% set st = o.state or 'WATCH' %}
             {% set st_human = 'Entrada simulada activa' if st == 'WATCH' else ('Lista para ejecutar' if st == 'READY' else ('Ejecución inmediata' if st == 'TRIGGERED' else st)) %}
             <tr>
-              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.entry_kind or 'automática' }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
+              <td>{{ o.id }}</td><td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}')">{{ o.ticker }}</button></td><td>{{ st_human }}</td><td>{{ o.entry_kind or 'automática' }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
               <td>
                 <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
                   <input type="hidden" name="order_id" value="{{ o.id }}" />
@@ -749,6 +751,23 @@
 
     <div class="foot">Última actualización: <span id="ts"></span></div>
   </div>
+
+  <div class="modal-backdrop" id="analysisModal">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h2 id="anTitle" style="margin:0">Análisis detallado</h2>
+        <button class="tab-btn" type="button" onclick="closeAnalysis()">Cerrar</button>
+      </div>
+      <p id="anNarrativa" class="muted" style="margin-top:8px"></p>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin:10px 0">
+        <div class="pill">Precio: <span id="anPrice">-</span></div>
+        <div class="pill">Entrada: <span id="anEntry">-</span></div>
+        <div class="pill">Target: <span id="anTarget">-</span></div>
+        <div class="pill">Stop: <span id="anStop">-</span></div>
+      </div>
+      <svg id="anCandle" viewBox="0 0 900 260" style="width:100%;height:260px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222"></svg>
+    </div>
+  </div>
   <script>
     document.getElementById('ts').textContent = new Date().toLocaleString();
 
@@ -920,6 +939,41 @@
         logEl.innerHTML = lines.join('');
       }
     })();
+
+    async function openAnalysis(ticker){
+      const modal = document.getElementById('analysisModal');
+      modal.style.display = 'flex';
+      const res = await fetch(`/api/analysis/${encodeURIComponent(ticker)}`);
+      const d = await res.json();
+      document.getElementById('anTitle').textContent = `Análisis detallado · ${d.ticker}`;
+      document.getElementById('anNarrativa').textContent = d.narrativa || '';
+      document.getElementById('anPrice').textContent = d.price ?? '-';
+      document.getElementById('anEntry').textContent = d.entry_price ?? '-';
+      document.getElementById('anTarget').textContent = d.target_price ?? '-';
+      document.getElementById('anStop').textContent = d.stop_price ?? '-';
+
+      const svg = document.getElementById('anCandle');
+      const c = Array.isArray(d.candles) ? d.candles : [];
+      if(c.length < 2){ svg.innerHTML=''; return; }
+      const w=900,h=260,p=24;
+      const hi=Math.max(...c.map(x=>x.h));
+      const lo=Math.min(...c.map(x=>x.l));
+      const span=(hi-lo)||1;
+      const xStep=(w-2*p)/c.length;
+      const y=v=>h-p-((v-lo)/span)*(h-2*p);
+      const bodyW=Math.max(2, xStep*0.55);
+      let html='';
+      c.forEach((k,i)=>{
+        const x=p+i*xStep+xStep/2;
+        const color=k.c>=k.o ? '#22c55e' : '#ef4444';
+        html += `<line x1="${x}" y1="${y(k.h)}" x2="${x}" y2="${y(k.l)}" stroke="${color}" stroke-width="1.2"/>`;
+        const by=Math.min(y(k.o),y(k.c));
+        const bh=Math.max(1,Math.abs(y(k.o)-y(k.c)));
+        html += `<rect x="${x-bodyW/2}" y="${by}" width="${bodyW}" height="${bh}" fill="${color}" opacity="0.9"/>`;
+      });
+      svg.innerHTML = html;
+    }
+    function closeAnalysis(){ document.getElementById('analysisModal').style.display='none'; }
 
     setTimeout(() => location.reload(), 30000);
   </script>
