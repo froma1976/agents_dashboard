@@ -804,7 +804,7 @@
         'risk-exec-agent':[26,258],
         'devil-advocate-agent':[305,258],
         'alpha-scout':[575,258],
-        'gpt53-council-agent':[575,405],
+        'local-council-agent':[575,405],
         'conclave':[300,440],
       };
 
@@ -820,7 +820,7 @@
         if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) inConclave.add('risk-exec-agent');
         const conf = Number(top.confidence_pct ?? top.score_final ?? 0);
         const critical = ((top.state === 'READY' || top.state === 'TRIGGERED') && conf >= 75) || (top.decision_final === 'AVOID');
-        if (critical) inConclave.add('gpt53-council-agent');
+        if (critical) inConclave.add('local-council-agent');
       }
 
       const conclaveEl = document.getElementById('conclaveCount');
@@ -829,7 +829,7 @@
       }
       const gptAlert = document.getElementById('gpt53Alert');
       if (gptAlert) {
-        if (inConclave.has('gpt53-council-agent')) {
+        if (inConclave.has('local-council-agent')) {
           gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo Local Qwen3) está arbitrando la decisión final.';
         } else {
           gptAlert.innerHTML = '<span class="badge ok">Modo normal</span> Sin arbitraje GPT‑5.3 en este ciclo.';
@@ -843,7 +843,7 @@
         'technical-agent': 'Teo (Análisis técnico)',
         'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
         'devil-advocate-agent': 'Diego (Abogado del Diablo)',
-        'gpt53-council-agent': 'Gaia (Consejo Local Qwen3)',
+        'local-council-agent': 'Gaia (Consejo Local Qwen3)',
       };
 
       let conclaveIdx = 0;
