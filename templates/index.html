@@ -301,12 +301,12 @@
       <div class="card col-12">
         <h2>Órdenes pendientes</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Entrada</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Entrada</th><th>Precio actual</th><th>% desde entrada</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
           {% for o in orders_pending %}
             {% set st = o.state or 'WATCH' %}
             {% set st_human = 'Entrada simulada activa' if st == 'WATCH' else ('Lista para ejecutar' if st == 'READY' else ('Ejecución inmediata' if st == 'TRIGGERED' else st)) %}
             <tr>
-              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
+              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
               <td>
                 <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
                   <input type="hidden" name="order_id" value="{{ o.id }}" />
@@ -315,7 +315,7 @@
               </td>
             </tr>
           {% endfor %}
-          {% if orders_pending|length == 0 %}<tr><td colspan="9">Sin órdenes pendientes</td></tr>{% endif %}
+          {% if orders_pending|length == 0 %}<tr><td colspan="11">Sin órdenes pendientes</td></tr>{% endif %}
         </table>
         <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada.</div>
       </div>
@@ -867,12 +867,14 @@
         if (conclave) tag.classList.add('in-conclave');
         tag.textContent = agentNames[a.id] || a.id;
 
-        const baseRoom = document.getElementById(roomTargets[a.id]);
-        if (baseRoom) baseRoom.appendChild(tag.cloneNode(true));
-
+        // Regla visual estricta: cada agente solo puede estar en UNA sala.
+        // Prioridad: cónclave > sala base.
         if (conclave) {
           const conclaveRoom = document.getElementById('room-agents-conclave');
           if (conclaveRoom) conclaveRoom.appendChild(tag);
+        } else {
+          const baseRoom = document.getElementById(roomTargets[a.id]);
+          if (baseRoom) baseRoom.appendChild(tag);
         }
       });
 

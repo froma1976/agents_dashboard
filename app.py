@@ -823,6 +823,34 @@ def home(request: Request):
     completed_orders = orders.get("completed", [])
     journal = load_journal()
 
+    # Enriquecer órdenes pendientes con precio actual y variación % vs entrada
+    try:
+        market_rows = signals.get("market", []) if isinstance(signals, dict) else []
+        px_map = {}
+        for m in market_rows:
+            if isinstance(m, dict) and m.get("ticker"):
+                p = m.get("regularMarketPrice") or m.get("lastCloseSeries")
+                try:
+                    px_map[str(m.get("ticker"))] = float(p)
+                except Exception:
+                    pass
+
+        for o in pending_orders:
+            t = str(o.get("ticker") or "")
+            cur_px = px_map.get(t)
+            o["current_price"] = round(cur_px, 4) if cur_px is not None else None
+            entry = o.get("entry_price")
+            try:
+                if cur_px is not None and entry not in (None, 0, ""):
+                    entry_f = float(entry)
+                    o["pct_move"] = round(((cur_px - entry_f) / entry_f) * 100, 2)
+                else:
+                    o["pct_move"] = None
+            except Exception:
+                o["pct_move"] = None
+    except Exception:
+        pass
+
     wins = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "ganada")
     losses = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "perdida")
     neutral = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "neutral")
