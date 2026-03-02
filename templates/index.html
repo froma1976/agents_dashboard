@@ -84,8 +84,12 @@
       .kpi .v{font-size:22px}
       th,td{padding:7px;font-size:12px}
       .foot{font-size:11px}
-      .office-map{height:620px}
-      .agent-bubble{min-width:120px;max-width:160px;font-size:11px}
+
+      /* Oficina en móvil: vista clara tipo lista (sin solapes) */
+      .office-map{height:auto;min-height:0;padding:8px;display:grid;grid-template-columns:1fr;gap:8px}
+      .room-box{position:static;max-width:100%;font-size:12px}
+      .room:after{display:none}
+      .agent-bubble{display:none}
     }
   </style>
 </head>
@@ -106,7 +110,7 @@
           Modo: <span class="badge {{ 'ok' if run_status.mode=='NORMAL' else 'warn' }}" style="margin-left:6px">{{ run_status.mode }}</span>
         </div>
         <div class="pill" style="border-color:#2a3a5b">
-          GPT‑5.3 {{ gpt53_budget.mode }}: {{ gpt53_budget.calls_used }}/{{ gpt53_budget.max_calls }}
+          Consejo local (Qwen3) {{ gpt53_budget.mode }}: {{ gpt53_budget.calls_used }}/{{ gpt53_budget.max_calls }}
         </div>
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
@@ -295,25 +299,23 @@
       <div class="card col-12">
         <h2>Órdenes pendientes</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Entrada</th><th>Target</th><th>Stop</th><th>Creada</th><th>Acción</th></tr>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Entrada</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
           {% for o in orders_pending %}
+            {% set st = o.state or 'WATCH' %}
+            {% set st_human = 'Entrada simulada activa' if st == 'WATCH' else ('Lista para ejecutar' if st == 'READY' else ('Ejecución inmediata' if st == 'TRIGGERED' else st)) %}
             <tr>
-              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
+              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
               <td>
                 <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
                   <input type="hidden" name="order_id" value="{{ o.id }}" />
-                  <select name="result" style="padding:6px;border-radius:8px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff">
-                    <option value="ganada">ganada</option>
-                    <option value="neutral">neutral</option>
-                    <option value="perdida">perdida</option>
-                  </select>
-                  <button type="submit" style="padding:6px 10px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Completar</button>
+                  <button type="submit" style="padding:6px 10px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Cerrar manual</button>
                 </form>
               </td>
             </tr>
           {% endfor %}
           {% if orders_pending|length == 0 %}<tr><td colspan="9">Sin órdenes pendientes</td></tr>{% endif %}
         </table>
+        <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada.</div>
       </div>
 
       <div class="card col-12">
@@ -414,7 +416,7 @@
     <div class="grid tab-section" data-tab="oficina">
       <div class="card col-12">
         <h2>🏢 Oficina viva de agentes</h2>
-        <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. Los puntos se mueven entre despachos y sala común.</p>
+        <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. En móvil se muestra una vista simplificada (sin solapes) para que se lea mejor.</p>
         <div class="office-legend">
           <span class="legend-item">🔵 En despacho</span>
           <span class="legend-item">🟠 En tránsito</span>
@@ -446,8 +448,8 @@
             Aquí se orquesta todo y se decide qué pasa a WATCH/READY/TRIGGERED.
           </div>
           <div class="room-box" style="left:560px;top:330px">
-            <span class="room-name">Consejo GPT‑5.3</span>
-            Aquí entra solo en casos críticos para arbitrar la decisión final.
+            <span class="room-name">Consejo Local (Qwen3)</span>
+            Aquí entra solo en casos críticos para arbitrar la decisión final en local.
           </div>
           <div class="room-box" style="left:280px;top:370px">
             <span class="room-name">🧠 Cónclave</span>
@@ -828,7 +830,7 @@
       const gptAlert = document.getElementById('gpt53Alert');
       if (gptAlert) {
         if (inConclave.has('gpt53-council-agent')) {
-          gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo GPT‑5.3) está arbitrando la decisión final.';
+          gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo Local Qwen3) está arbitrando la decisión final.';
         } else {
           gptAlert.innerHTML = '<span class="badge ok">Modo normal</span> Sin arbitraje GPT‑5.3 en este ciclo.';
         }
@@ -841,7 +843,7 @@
         'technical-agent': 'Teo (Análisis técnico)',
         'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
         'devil-advocate-agent': 'Diego (Abogado del Diablo)',
-        'gpt53-council-agent': 'Gaia (Consejo GPT‑5.3)',
+        'gpt53-council-agent': 'Gaia (Consejo Local Qwen3)',
       };
 
       let conclaveIdx = 0;
