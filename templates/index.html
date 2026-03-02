@@ -263,12 +263,13 @@
       <div class="card col-12">
         <h2>Cartera (USD) — vista simple</h2>
         <table>
-          <tr><th>Capital inicial</th><th>Cash</th><th>Valor posiciones</th><th>Equity</th><th>Nº posiciones</th></tr>
+          <tr><th>Capital inicial</th><th>Cash</th><th>Valor posiciones</th><th>Equity base</th><th>Equity total (incl. PnL activo est.)</th><th>Nº posiciones</th></tr>
           <tr>
             <td>{{ portfolio.capital_initial_usd if portfolio.capital_initial_usd is not none else '-' }}</td>
             <td>{{ '%.2f'|format(portfolio_cash_usd) }}</td>
             <td>{{ '%.2f'|format(portfolio_market_value_usd) }}</td>
             <td>{{ '%.2f'|format(portfolio_equity_usd) }}</td>
+            <td><span class="badge {{ 'ok' if (orders_kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{ '%.2f'|format(portfolio_equity_live_est) }}</span></td>
             <td>{{ portfolio_positions|length }}</td>
           </tr>
         </table>
@@ -278,9 +279,10 @@
         <h2>KPIs de rendimiento (simulado)</h2>
         {% set kpi = orders_kpi|default({'pending':0,'closed':0,'wins':0,'losses':0,'neutral':0,'win_rate':0}) %}
         <table>
-          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th><th>PnL pendiente (USD est.)</th></tr>
+          <tr><th>Pendientes de entrada</th><th>Órdenes activas</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th><th>PnL activo (USD est.)</th></tr>
           <tr>
             <td>{{ kpi.pending }}</td>
+            <td>{{ kpi.active }}</td>
             <td>{{ kpi.closed }}</td>
             <td>{{ kpi.wins }}</td>
             <td>{{ kpi.losses }}</td>
@@ -300,10 +302,10 @@
       </div>
 
       <div class="card col-12">
-        <h2>Órdenes pendientes</h2>
+        <h2>Órdenes activas (ya entramos)</h2>
         <table>
           <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Tipo</th><th>Score</th><th>Entrada</th><th>Precio actual</th><th>% desde entrada</th><th>PnL USD est.</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
-          {% for o in orders_pending %}
+          {% for o in orders_active %}
             {% set st = o.state or 'WATCH' %}
             {% set st_human = 'Entrada simulada activa' if st == 'WATCH' else ('Lista para ejecutar' if st == 'READY' else ('Ejecución inmediata' if st == 'TRIGGERED' else st)) %}
             <tr>
@@ -316,9 +318,20 @@
               </td>
             </tr>
           {% endfor %}
-          {% if orders_pending|length == 0 %}<tr><td colspan="13">Sin órdenes pendientes</td></tr>{% endif %}
+          {% if orders_active|length == 0 %}<tr><td colspan="13">Sin órdenes activas</td></tr>{% endif %}
         </table>
         <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada. PnL USD es una estimación rápida por unidad.</div>
+      </div>
+
+      <div class="card col-12">
+        <h2>Pendientes de entrada (aún no ejecutadas)</h2>
+        <table>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th></tr>
+          {% for o in orders_pending %}
+            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state or 'WATCH' }}</td><td>{{ o.score }}</td><td>{{ o.created_at }}</td></tr>
+          {% endfor %}
+          {% if orders_pending|length == 0 %}<tr><td colspan="5">No hay pendientes de entrada</td></tr>{% endif %}
+        </table>
       </div>
 
       <div class="card col-12">

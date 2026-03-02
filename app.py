@@ -859,6 +859,10 @@ def home(request: Request):
     except Exception:
         pass
 
+    # Separar órdenes: pendientes de entrada vs activas (entrada abierta)
+    pre_entry_orders = [o for o in pending_orders if o.get("entry_price") in (None, "", 0)]
+    active_orders = [o for o in pending_orders if o.get("entry_price") not in (None, "", 0)]
+
     wins = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "ganada")
     losses = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "perdida")
     neutral = sum(1 for o in completed_orders if str(o.get("result", "")).lower() == "neutral")
@@ -903,6 +907,7 @@ def home(request: Request):
 
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
+    equity_live_est = round(equity + unrealized_usd_est, 2)
 
     return templates.TemplateResponse(
         "index.html",
@@ -918,6 +923,7 @@ def home(request: Request):
             "portfolio_cash_usd": cash_usd,
             "portfolio_market_value_usd": market_value,
             "portfolio_equity_usd": equity,
+            "portfolio_equity_live_est": equity_live_est,
             "signals": signals,
             "commits": commits,
             "signals_stale": stale,
@@ -926,10 +932,12 @@ def home(request: Request):
             "agents_health": agents_health,
             "agent_live": agent_live,
             "run_status": run_status,
-            "orders_pending": pending_orders,
+            "orders_pending": pre_entry_orders,
+            "orders_active": active_orders,
             "orders_completed": completed_orders,
             "orders_kpi": {
-                "pending": len(pending_orders),
+                "pending": len(pre_entry_orders),
+                "active": len(active_orders),
                 "closed": total_closed,
                 "wins": wins,
                 "losses": losses,
