@@ -278,7 +278,7 @@
         <h2>KPIs de rendimiento (simulado)</h2>
         {% set kpi = orders_kpi|default({'pending':0,'closed':0,'wins':0,'losses':0,'neutral':0,'win_rate':0}) %}
         <table>
-          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th></tr>
+          <tr><th>Órdenes pendientes</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th><th>PnL pendiente (USD est.)</th></tr>
           <tr>
             <td>{{ kpi.pending }}</td>
             <td>{{ kpi.closed }}</td>
@@ -288,6 +288,7 @@
             <td>{{ kpi.win_rate }}%</td>
             <td>{{ kpi.expectancy_r }}</td>
             <td>{{ kpi.max_drawdown_r }}</td>
+            <td><span class="badge {{ 'ok' if (kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{ kpi.unrealized_usd_est }}</span></td>
           </tr>
         </table>
       </div>
@@ -301,12 +302,12 @@
       <div class="card col-12">
         <h2>Órdenes pendientes</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Entrada</th><th>Precio actual</th><th>% desde entrada</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
+          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Tipo</th><th>Score</th><th>Entrada</th><th>Precio actual</th><th>% desde entrada</th><th>PnL USD est.</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
           {% for o in orders_pending %}
             {% set st = o.state or 'WATCH' %}
             {% set st_human = 'Entrada simulada activa' if st == 'WATCH' else ('Lista para ejecutar' if st == 'READY' else ('Ejecución inmediata' if st == 'TRIGGERED' else st)) %}
             <tr>
-              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
+              <td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ st_human }}</td><td>{{ o.entry_kind or 'automática' }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
               <td>
                 <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
                   <input type="hidden" name="order_id" value="{{ o.id }}" />
@@ -315,9 +316,9 @@
               </td>
             </tr>
           {% endfor %}
-          {% if orders_pending|length == 0 %}<tr><td colspan="11">Sin órdenes pendientes</td></tr>{% endif %}
+          {% if orders_pending|length == 0 %}<tr><td colspan="13">Sin órdenes pendientes</td></tr>{% endif %}
         </table>
-        <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada.</div>
+        <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada. PnL USD es una estimación rápida por unidad.</div>
       </div>
 
       <div class="card col-12">

@@ -824,6 +824,7 @@ def home(request: Request):
     journal = load_journal()
 
     # Enriquecer órdenes pendientes con precio actual y variación % vs entrada
+    unrealized_usd_est = 0.0
     try:
         market_rows = signals.get("market", []) if isinstance(signals, dict) else []
         px_map = {}
@@ -840,14 +841,21 @@ def home(request: Request):
             cur_px = px_map.get(t)
             o["current_price"] = round(cur_px, 4) if cur_px is not None else None
             entry = o.get("entry_price")
+            o["entry_kind"] = "forzada manual" if o.get("forced") else "automática"
+            o["entry_status"] = "entrada abierta"
             try:
                 if cur_px is not None and entry not in (None, 0, ""):
                     entry_f = float(entry)
                     o["pct_move"] = round(((cur_px - entry_f) / entry_f) * 100, 2)
+                    # estimación simple: 1 unidad por señal
+                    o["pnl_usd_est"] = round(cur_px - entry_f, 4)
+                    unrealized_usd_est += (cur_px - entry_f)
                 else:
                     o["pct_move"] = None
+                    o["pnl_usd_est"] = None
             except Exception:
                 o["pct_move"] = None
+                o["pnl_usd_est"] = None
     except Exception:
         pass
 
@@ -929,6 +937,7 @@ def home(request: Request):
                 "win_rate": win_rate,
                 "expectancy_r": expectancy_r,
                 "max_drawdown_r": max_drawdown_r,
+                "unrealized_usd_est": round(unrealized_usd_est, 2),
             },
             "equity_curve": equity_curve,
             "market_today": market_today,
