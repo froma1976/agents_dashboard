@@ -207,6 +207,21 @@ def load_orders():
         return {"pending": [], "completed": []}
 
 
+def load_crypto_orders():
+    p = Path("C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json")
+    if not p.exists():
+        return {"active": [], "completed": [], "daily": {"trades": 0}}
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return {
+            "active": d.get("active", []),
+            "completed": d.get("completed", []),
+            "daily": d.get("daily", {"trades": 0}),
+        }
+    except Exception:
+        return {"active": [], "completed": [], "daily": {"trades": 0}}
+
+
 def load_journal():
     if not JOURNAL_PATH.exists():
         return []
@@ -863,6 +878,7 @@ def home(request: Request):
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
     crypto_signals = load_crypto_snapshot()
+    crypto_orders = load_crypto_orders()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
     agents_runtime = load_agents_runtime()
@@ -995,6 +1011,23 @@ def home(request: Request):
     stale = (freshness is None) or (freshness > 20)
     equity_live_est = round(equity + unrealized_usd_est, 2)
 
+    # cartera cripto separada
+    crypto_active = crypto_orders.get("active", []) or []
+    crypto_completed = crypto_orders.get("completed", []) or []
+    crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
+    crypto_unrealized = 0.0
+    for o in crypto_active:
+        try:
+            ep = float(o.get("entry_price"))
+            cp = float(crypto_map.get(o.get("ticker"), ep))
+            o["current_price"] = round(cp, 6)
+            o["pct_move"] = round(((cp - ep) / ep) * 100, 2)
+            o["pnl_usd_est"] = round(cp - ep, 6)
+            crypto_unrealized += (cp - ep)
+        except Exception:
+            o["pct_move"] = None
+            o["pnl_usd_est"] = None
+
     return templates.TemplateResponse(
         "index.html",
         {
@@ -1012,6 +1045,9 @@ def home(request: Request):
             "portfolio_equity_live_est": equity_live_est,
             "signals": signals,
             "crypto_signals": crypto_signals,
+            "crypto_orders_active": crypto_active,
+            "crypto_orders_completed": crypto_completed,
+            "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
             "commits": commits,
             "signals_stale": stale,
             "autopilot_log": autopilot_log,

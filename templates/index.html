@@ -434,6 +434,18 @@
 
     <div class="grid tab-section" data-tab="crypto">
       <div class="card col-12">
+        <h2>Cartera Cripto (separada)</h2>
+        <table>
+          <tr><th>Activas</th><th>Cerradas</th><th>PnL activo USD (est.)</th></tr>
+          <tr>
+            <td>{{ crypto_orders_active|length }}</td>
+            <td>{{ crypto_orders_completed|length }}</td>
+            <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{ crypto_unrealized_usd_est }}</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Cripto Scout (simulado) — lenguaje natural</h2>
         <p class="muted">Fuente: {{ crypto_signals.source or 'N/D' }} · actualización: {{ crypto_signals.generated_at or 'N/D' }}{% if crypto_signals.freshness_min is not none %} (hace {{ crypto_signals.freshness_min }} min){% endif %}</p>
         <table>
@@ -447,7 +459,7 @@
               <td>{{ c.score }}</td>
               <td><span class="badge {{ 'ok' if (c.spy_confluence or 0) >= 2 else 'no' }}">{{ c.spy_confluence or 0 }}</span></td>
               <td>{{ c.state }}</td>
-              <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else ('warn' if c.decision_final=='HOLD' else 'no') }}">{{ c.decision_final }}</span></td>
+              <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else 'no' }}">{{ c.decision_final }}</span></td>
               <td>{{ c.argumento_en_contra }}</td>
             </tr>
           {% endfor %}
