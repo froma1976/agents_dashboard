@@ -24,6 +24,7 @@ ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspa
 JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/trades_journal.json"))
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
+CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_free.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
 
@@ -163,6 +164,25 @@ def load_signals_snapshot():
         return data
     except Exception:
         return {"generated_at": None, "macro": [], "market": [], "news": [], "freshness_min": None}
+
+
+def load_crypto_snapshot():
+    if not CRYPTO_SIGNALS_PATH.exists():
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
+    try:
+        data = json.loads(CRYPTO_SIGNALS_PATH.read_text(encoding="utf-8"))
+        gen = data.get("generated_at")
+        freshness = None
+        if gen:
+            try:
+                dt = datetime.fromisoformat(gen.replace("Z", "+00:00"))
+                freshness = int((datetime.now(UTC) - dt).total_seconds() // 60)
+            except Exception:
+                freshness = None
+        data["freshness_min"] = freshness
+        return data
+    except Exception:
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
 
 
 def load_agents_runtime():
@@ -842,6 +862,7 @@ def home(request: Request):
     market_value = sum(float(p.get("notional_usd", 0)) for p in positions if p.get("status") == "active")
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
+    crypto_signals = load_crypto_snapshot()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
     agents_runtime = load_agents_runtime()
@@ -990,6 +1011,7 @@ def home(request: Request):
             "portfolio_equity_usd": equity,
             "portfolio_equity_live_est": equity_live_est,
             "signals": signals,
+            "crypto_signals": crypto_signals,
             "commits": commits,
             "signals_stale": stale,
             "autopilot_log": autopilot_log,
