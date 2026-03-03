@@ -217,9 +217,10 @@ def load_crypto_orders():
             "active": d.get("active", []),
             "completed": d.get("completed", []),
             "daily": d.get("daily", {"trades": 0}),
+            "portfolio": d.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300}),
         }
     except Exception:
-        return {"active": [], "completed": [], "daily": {"trades": 0}}
+        return {"active": [], "completed": [], "daily": {"trades": 0}, "portfolio": {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300}}
 
 
 def load_journal():
@@ -1014,6 +1015,7 @@ def home(request: Request):
     # cartera cripto separada
     crypto_active = crypto_orders.get("active", []) or []
     crypto_completed = crypto_orders.get("completed", []) or []
+    crypto_portfolio = crypto_orders.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300})
     crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
     crypto_unrealized = 0.0
     for o in crypto_active:
@@ -1048,6 +1050,7 @@ def home(request: Request):
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed,
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
+            "crypto_portfolio": crypto_portfolio,
             "commits": commits,
             "signals_stale": stale,
             "autopilot_log": autopilot_log,

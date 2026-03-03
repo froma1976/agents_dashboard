@@ -436,8 +436,12 @@
       <div class="card col-12">
         <h2>Cartera Cripto (separada)</h2>
         <table>
-          <tr><th>Activas</th><th>Cerradas</th><th>PnL activo USD (est.)</th></tr>
+          <tr><th>Capital inicial</th><th>Cash</th><th>Valor activo</th><th>Equity</th><th>Activas</th><th>Cerradas</th><th>PnL activo USD (est.)</th></tr>
           <tr>
+            <td>{{ crypto_portfolio.capital_initial_usd }}</td>
+            <td>{{ crypto_portfolio.cash_usd }}</td>
+            <td>{{ crypto_portfolio.market_value_usd }}</td>
+            <td><span class="badge {{ 'ok' if (crypto_portfolio.equity_usd or 0) >= (crypto_portfolio.capital_initial_usd or 0) else 'no' }}">{{ crypto_portfolio.equity_usd }}</span></td>
             <td>{{ crypto_orders_active|length }}</td>
             <td>{{ crypto_orders_completed|length }}</td>
             <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{ crypto_unrealized_usd_est }}</span></td>
