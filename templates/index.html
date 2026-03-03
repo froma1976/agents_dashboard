@@ -440,7 +440,7 @@
           <tr><th>Activo</th><th>Precio USD</th><th>24h</th><th>7d</th><th>Score</th><th>Estado</th><th>Decisión</th><th>Lectura en cristiano</th></tr>
           {% for c in crypto_signals.top_opportunities[:10] if crypto_signals.top_opportunities is defined %}
             <tr>
-              <td><strong>{{ c.ticker }}</strong> · {{ c.name }}</td>
+              <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ c.ticker }}-USD')">{{ c.ticker }}</button> · {{ c.name }}</td>
               <td>{{ c.price_usd }}</td>
               <td><span class="badge {{ 'ok' if c.chg_24h_pct >= 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
               <td><span class="badge {{ 'ok' if c.chg_7d_pct >= 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
