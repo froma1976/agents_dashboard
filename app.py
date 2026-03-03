@@ -25,6 +25,7 @@ JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/works
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
 CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_free.json"))
+CRYPTO_ORDERS_PATH = Path(os.getenv("CRYPTO_ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json"))
 CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
@@ -219,7 +220,7 @@ def load_orders():
 
 
 def load_crypto_orders():
-    p = Path("C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json")
+    p = CRYPTO_ORDERS_PATH
     if not p.exists():
         return {"active": [], "completed": [], "daily": {"trades": 0}}
     try:
@@ -747,6 +748,31 @@ def refresh_signals():
         except Exception:
             pass
     return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/crypto/pause")
+def crypto_pause():
+    d = load_crypto_orders()
+    daily = d.get("daily", {}) or {}
+    daily["paused"] = True
+    daily["pause_reason"] = "pausa manual"
+    d["daily"] = daily
+    CRYPTO_ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CRYPTO_ORDERS_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    return RedirectResponse(url="/?crypto=paused", status_code=303)
+
+
+@app.post("/crypto/resume")
+def crypto_resume():
+    d = load_crypto_orders()
+    daily = d.get("daily", {}) or {}
+    daily["paused"] = False
+    daily["pause_reason"] = ""
+    daily["loss_streak"] = 0
+    d["daily"] = daily
+    CRYPTO_ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CRYPTO_ORDERS_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    return RedirectResponse(url="/?crypto=resumed", status_code=303)
 
 
 @app.post("/signals/autotasks")

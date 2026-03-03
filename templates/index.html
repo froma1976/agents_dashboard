@@ -438,8 +438,9 @@
         <h2>Cartera Cripto (separada)</h2>
         <p>
           Stream:
-          <span class="badge {{ 'ok' if crypto_stream.stream_active else 'no' }}">{{ 'ACTIVO' if crypto_stream.stream_active else 'INACTIVO' }}</span>
-          <span class="muted"> · latencia: {{ crypto_stream.latency_ms if crypto_stream.latency_ms is not none else 'N/D' }} ms · última señal: {{ crypto_stream.last_signal_sec if crypto_stream.last_signal_sec is not none else 'N/D' }} s</span>
+          {% set cs = crypto_stream|default({'stream_active':False,'latency_ms':None,'last_signal_sec':None}) %}
+          <span class="badge {{ 'ok' if cs.stream_active else 'no' }}">{{ 'ACTIVO' if cs.stream_active else 'INACTIVO' }}</span>
+          <span class="muted"> · latencia: {{ cs.latency_ms if cs.latency_ms is not none else 'N/D' }} ms · última señal: {{ cs.last_signal_sec if cs.last_signal_sec is not none else 'N/D' }} s</span>
         </p>
         <p>
           Estado motor:
@@ -450,6 +451,10 @@
           {% endif %}
           <span class="muted"> · racha pérdidas: {{ crypto_daily.loss_streak or 0 }} · trades/hoy: {{ crypto_daily.trades or 0 }}</span>
         </p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <form method="post" action="/crypto/pause" style="margin:0"><button class="tab-btn" type="submit">Pausar motor</button></form>
+          <form method="post" action="/crypto/resume" style="margin:0"><button class="tab-btn" type="submit">Reanudar motor</button></form>
+        </div>
         <table>
           <tr><th>Capital inicial</th><th>Gastado en operaciones activas</th><th>Cash libre</th><th>Valor activo</th><th>Equity total</th><th>Activas</th><th>Cerradas</th><th>Ganando/Perdiendo ahora (USD est.)</th></tr>
           <tr>
