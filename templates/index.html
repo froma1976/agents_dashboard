@@ -437,6 +437,11 @@
       <div class="card col-12">
         <h2>Cartera Cripto (separada)</h2>
         <p>
+          Stream:
+          <span class="badge {{ 'ok' if crypto_stream.stream_active else 'no' }}">{{ 'ACTIVO' if crypto_stream.stream_active else 'INACTIVO' }}</span>
+          <span class="muted"> · latencia: {{ crypto_stream.latency_ms if crypto_stream.latency_ms is not none else 'N/D' }} ms · última señal: {{ crypto_stream.last_signal_sec if crypto_stream.last_signal_sec is not none else 'N/D' }} s</span>
+        </p>
+        <p>
           Estado motor:
           {% if crypto_daily.paused %}
             <span class="badge no">PAUSADO</span> <span class="muted">{{ crypto_daily.pause_reason }}</span>

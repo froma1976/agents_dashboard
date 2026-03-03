@@ -25,6 +25,7 @@ JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/works
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
 CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_free.json"))
+CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
 
@@ -183,6 +184,16 @@ def load_crypto_snapshot():
         return data
     except Exception:
         return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
+
+
+def load_crypto_stream_status():
+    if not CRYPTO_STREAM_STATUS_PATH.exists():
+        return {"stream_active": False, "latency_ms": None, "last_signal_sec": None}
+    try:
+        d = json.loads(CRYPTO_STREAM_STATUS_PATH.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {"stream_active": False, "latency_ms": None, "last_signal_sec": None}
+    except Exception:
+        return {"stream_active": False, "latency_ms": None, "last_signal_sec": None}
 
 
 def load_agents_runtime():
@@ -901,6 +912,7 @@ def home(request: Request):
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
     crypto_signals = load_crypto_snapshot()
+    crypto_stream = load_crypto_stream_status()
     crypto_orders = load_crypto_orders()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
@@ -1070,6 +1082,7 @@ def home(request: Request):
             "portfolio_equity_live_est": equity_live_est,
             "signals": signals,
             "crypto_signals": crypto_signals,
+            "crypto_stream": crypto_stream,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed,
             "crypto_daily": crypto_orders.get("daily", {}),
