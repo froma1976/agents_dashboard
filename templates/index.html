@@ -496,7 +496,7 @@
         <h2>Cripto Scout (simulado) — lenguaje natural</h2>
         <p class="muted">Fuente: {{ crypto_signals.source or 'N/D' }} · actualización: {{ crypto_signals.generated_at or 'N/D' }}{% if crypto_signals.freshness_min is not none %} (hace {{ crypto_signals.freshness_min }} min){% endif %}</p>
         <table>
-          <tr><th>Activo</th><th>Precio USD</th><th>24h</th><th>7d</th><th>Score</th><th>Espías (confluencia)</th><th>Estado</th><th>Decisión</th><th>Ejecución</th><th>Lectura en cristiano</th></tr>
+          <tr><th>Activo</th><th>Precio USD</th><th>24h</th><th>7d</th><th>Score</th><th>Gem score</th><th>Espías</th><th>Rugcheck</th><th>Estado</th><th>Decisión</th><th>Ejecución</th><th>Lectura en cristiano</th></tr>
           {% for c in crypto_signals.top_opportunities[:10] if crypto_signals.top_opportunities is defined %}
             <tr>
               <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ c.ticker }}-USD')">{{ c.ticker }}</button> · {{ c.name }}</td>
@@ -504,7 +504,9 @@
               <td><span class="badge {{ 'ok' if c.chg_24h_pct >= 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
               <td><span class="badge {{ 'ok' if c.chg_7d_pct >= 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
               <td>{{ c.score }}</td>
-              <td><span class="badge {{ 'ok' if (c.spy_confluence or 0) >= 2 else 'no' }}">{{ c.spy_confluence or 0 }}</span></td>
+              <td><span class="badge {{ 'ok' if (c.gem_score or 0) >= 75 else ('warn' if (c.gem_score or 0) >= 65 else 'no') }}">{{ c.gem_score or 0 }}</span></td>
+              <td><span class="badge {{ 'ok' if (c.spy_confluence or 0) >= 3 else 'no' }}">{{ c.spy_confluence or 0 }}</span></td>
+              <td><span class="badge {{ 'no' if c.rug_block else 'ok' }}">{{ 'BLOQUEA' if c.rug_block else 'OK' }}</span></td>
               <td>{{ c.state }}</td>
               <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else 'no' }}">{{ c.decision_final }}</span></td>
               <td>
@@ -518,7 +520,7 @@
             </tr>
           {% endfor %}
           {% if crypto_signals.top_opportunities is not defined or crypto_signals.top_opportunities|length == 0 %}
-            <tr><td colspan="10">Sin datos cripto todavía (ejecuta ingest cripto).</td></tr>
+            <tr><td colspan="12">Sin datos cripto todavía (ejecuta ingest cripto).</td></tr>
           {% endif %}
         </table>
       </div>
