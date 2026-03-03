@@ -436,6 +436,15 @@
       {% set cp = crypto_portfolio|default({'capital_initial_usd':300,'cash_usd':300,'market_value_usd':0,'equity_usd':300}) %}
       <div class="card col-12">
         <h2>Cartera Cripto (separada)</h2>
+        <p>
+          Estado motor:
+          {% if crypto_daily.paused %}
+            <span class="badge no">PAUSADO</span> <span class="muted">{{ crypto_daily.pause_reason }}</span>
+          {% else %}
+            <span class="badge ok">ACTIVO</span>
+          {% endif %}
+          <span class="muted"> · racha pérdidas: {{ crypto_daily.loss_streak or 0 }} · trades/hoy: {{ crypto_daily.trades or 0 }}</span>
+        </p>
         <table>
           <tr><th>Capital inicial</th><th>Gastado en operaciones activas</th><th>Cash libre</th><th>Valor activo</th><th>Equity total</th><th>Activas</th><th>Cerradas</th><th>Ganando/Perdiendo ahora (USD est.)</th></tr>
           <tr>

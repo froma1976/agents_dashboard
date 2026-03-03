@@ -1072,6 +1072,7 @@ def home(request: Request):
             "crypto_signals": crypto_signals,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed,
+            "crypto_daily": crypto_orders.get("daily", {}),
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
             "crypto_portfolio": crypto_portfolio,
             "active_crypto_tickers": list(active_crypto_tickers),
