@@ -580,6 +580,11 @@
             Lee velas 1m/5m para confirmar si entramos o evitamos.
             <div class="room-agents" id="room-agents-crypto-chart-agent"></div>
           </div>
+          <div class="room-box" id="room-crypto-breakout">
+            <span class="room-name">Cazador de ruptura temprana</span>
+            Detecta subidas explosivas con volumen para entrar al inicio.
+            <div class="room-agents" id="room-agents-crypto-breakout-agent"></div>
+          </div>
           <div class="room-box conclave-room" id="room-conclave">
             <span class="room-name">🧠 Cónclave</span>
             Sala final: se juntan pros y contras para emitir HOLD / BUY / AVOID.
@@ -986,6 +991,7 @@
         'crypto-whale-spy-agent': 'Wally (Espía ballenas)',
         'crypto-execution-agent': 'Rex (Ejecución rápida cripto)',
         'crypto-chart-agent': 'Cora (Analista de velas cripto)',
+        'crypto-breakout-agent': 'Bolt (Cazador de ruptura)',
       };
 
       const roomTargets = {
@@ -1002,6 +1008,7 @@
         'crypto-whale-spy-agent': 'room-agents-crypto-whale-spy-agent',
         'crypto-execution-agent': 'room-agents-crypto-execution-agent',
         'crypto-chart-agent': 'room-agents-crypto-chart-agent',
+        'crypto-breakout-agent': 'room-agents-crypto-breakout-agent',
       };
 
       agents.forEach((a) => {
