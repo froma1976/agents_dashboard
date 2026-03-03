@@ -575,6 +575,11 @@
             Lanza y cierra scalps en ventanas de segundos/minutos.
             <div class="room-agents" id="room-agents-crypto-execution-agent"></div>
           </div>
+          <div class="room-box" id="room-crypto-chart">
+            <span class="room-name">Analista de velas cripto</span>
+            Lee velas 1m/5m para confirmar si entramos o evitamos.
+            <div class="room-agents" id="room-agents-crypto-chart-agent"></div>
+          </div>
           <div class="room-box conclave-room" id="room-conclave">
             <span class="room-name">🧠 Cónclave</span>
             Sala final: se juntan pros y contras para emitir HOLD / BUY / AVOID.
@@ -980,6 +985,7 @@
         'crypto-flow-spy-agent': 'Flux (Espía flujo cripto)',
         'crypto-whale-spy-agent': 'Wally (Espía ballenas)',
         'crypto-execution-agent': 'Rex (Ejecución rápida cripto)',
+        'crypto-chart-agent': 'Cora (Analista de velas cripto)',
       };
 
       const roomTargets = {
@@ -995,6 +1001,7 @@
         'crypto-flow-spy-agent': 'room-agents-crypto-flow-spy-agent',
         'crypto-whale-spy-agent': 'room-agents-crypto-whale-spy-agent',
         'crypto-execution-agent': 'room-agents-crypto-execution-agent',
+        'crypto-chart-agent': 'room-agents-crypto-chart-agent',
       };
 
       agents.forEach((a) => {
