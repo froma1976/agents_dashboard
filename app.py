@@ -1079,6 +1079,13 @@ def home(request: Request):
     active_crypto_tickers = {str(o.get("ticker")) for o in crypto_active if o.get("ticker")}
     crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
     crypto_unrealized = 0.0
+    crypto_realized = 0.0
+    for c in crypto_completed:
+        try:
+            crypto_realized += float(c.get("pnl_usd") or 0)
+        except Exception:
+            pass
+
     for o in crypto_active:
         try:
             ep = float(o.get("entry_price"))
@@ -1113,6 +1120,8 @@ def home(request: Request):
             "crypto_orders_completed": crypto_completed,
             "crypto_daily": crypto_orders.get("daily", {}),
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
+            "crypto_realized_usd": round(crypto_realized, 4),
+            "crypto_equity_reconciled": round(float(crypto_portfolio.get("capital_initial_usd", 0)) + crypto_realized + crypto_unrealized, 4),
             "crypto_portfolio": crypto_portfolio,
             "active_crypto_tickers": list(active_crypto_tickers),
             "commits": commits,

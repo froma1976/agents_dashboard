@@ -456,16 +456,18 @@
           <form method="post" action="/crypto/resume" style="margin:0"><button class="tab-btn" type="submit">Reanudar motor</button></form>
         </div>
         <table>
-          <tr><th>Capital inicial</th><th>Gastado en operaciones activas</th><th>Cash libre</th><th>Valor activo</th><th>Equity total</th><th>Activas</th><th>Cerradas</th><th>Ganando/Perdiendo ahora (USD est.)</th></tr>
+          <tr><th>Capital inicial</th><th>Gastado en operaciones activas</th><th>Cash libre</th><th>Valor activo</th><th>PnL realizado</th><th>PnL no realizado</th><th>Equity total</th><th>Equity conciliada</th><th>Activas</th><th>Cerradas</th></tr>
           <tr>
             <td>{{ cp['capital_initial_usd'] }}</td>
             <td>{{ '%.2f'|format((cp['capital_initial_usd'] or 0) - (cp['cash_usd'] or 0)) }}</td>
             <td>{{ cp['cash_usd'] }}</td>
             <td>{{ cp['market_value_usd'] }}</td>
+            <td><span class="badge {{ 'ok' if (crypto_realized_usd or 0) >= 0 else 'no' }}">{{ crypto_realized_usd }}</span></td>
+            <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{ crypto_unrealized_usd_est }}</span></td>
             <td><span class="badge {{ 'ok' if (cp['equity_usd'] or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{ cp['equity_usd'] }}</span></td>
+            <td><span class="badge {{ 'ok' if (crypto_equity_reconciled or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{ crypto_equity_reconciled }}</span></td>
             <td>{{ crypto_orders_active|length }}</td>
             <td>{{ crypto_orders_completed|length }}</td>
-            <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{ crypto_unrealized_usd_est }}</span></td>
           </tr>
         </table>
         <div class="muted" style="margin-top:8px">BUY = entra operación. AVOID = no entramos.</div>
