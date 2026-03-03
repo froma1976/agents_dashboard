@@ -502,6 +502,31 @@
             Aquí entra solo en casos críticos para arbitrar la decisión final en local.
             <div class="room-agents" id="room-agents-local-council-agent"></div>
           </div>
+          <div class="room-box" id="room-crypto-news">
+            <span class="room-name">Espía cripto: noticias</span>
+            Rastrea titulares y catalizadores del ecosistema cripto.
+            <div class="room-agents" id="room-agents-crypto-news-spy-agent"></div>
+          </div>
+          <div class="room-box" id="room-crypto-euphoria">
+            <span class="room-name">Espía cripto: euforia</span>
+            Detecta hype extremo, FOMO y riesgo de reversión.
+            <div class="room-agents" id="room-agents-crypto-euphoria-spy-agent"></div>
+          </div>
+          <div class="room-box" id="room-crypto-flow">
+            <span class="room-name">Espía cripto: flujo</span>
+            Vigila volumen y aceleración para entrada/salida rápida.
+            <div class="room-agents" id="room-agents-crypto-flow-spy-agent"></div>
+          </div>
+          <div class="room-box" id="room-crypto-whale">
+            <span class="room-name">Espía cripto: ballenas</span>
+            Marca anomalías de posibles manos fuertes.
+            <div class="room-agents" id="room-agents-crypto-whale-spy-agent"></div>
+          </div>
+          <div class="room-box" id="room-crypto-exec">
+            <span class="room-name">Ejecución cripto rápida</span>
+            Lanza y cierra scalps en ventanas de segundos/minutos.
+            <div class="room-agents" id="room-agents-crypto-execution-agent"></div>
+          </div>
           <div class="room-box conclave-room" id="room-conclave">
             <span class="room-name">🧠 Cónclave</span>
             Sala final: se juntan pros y contras para emitir HOLD / BUY / AVOID.
@@ -902,6 +927,11 @@
         'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
         'devil-advocate-agent': 'Diego (Abogado del Diablo)',
         'local-council-agent': 'Gaia (Consejo Local Qwen3)',
+        'crypto-news-spy-agent': 'Nico (Espía noticias cripto)',
+        'crypto-euphoria-spy-agent': 'Eva (Espía euforia cripto)',
+        'crypto-flow-spy-agent': 'Flux (Espía flujo cripto)',
+        'crypto-whale-spy-agent': 'Wally (Espía ballenas)',
+        'crypto-execution-agent': 'Rex (Ejecución rápida cripto)',
       };
 
       const roomTargets = {
@@ -912,6 +942,11 @@
         'devil-advocate-agent': 'room-agents-devil-advocate-agent',
         'alpha-scout': 'room-agents-alpha-scout',
         'local-council-agent': 'room-agents-local-council-agent',
+        'crypto-news-spy-agent': 'room-agents-crypto-news-spy-agent',
+        'crypto-euphoria-spy-agent': 'room-agents-crypto-euphoria-spy-agent',
+        'crypto-flow-spy-agent': 'room-agents-crypto-flow-spy-agent',
+        'crypto-whale-spy-agent': 'room-agents-crypto-whale-spy-agent',
+        'crypto-execution-agent': 'room-agents-crypto-execution-agent',
       };
 
       agents.forEach((a) => {
