@@ -515,7 +515,7 @@
           <tr><th>Ticker</th><th>Entrada</th><th>Precio actual</th><th>%</th><th>PnL USD est.</th><th>Gastado (USD)</th><th>Target</th><th>Stop</th><th>Abierta</th></tr>
           {% for o in crypto_orders_active %}
             <tr>
-              <td>{{ o.ticker }}</td>
+              <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}-USD')">{{ o.ticker }}</button></td>
               <td>{{ o.entry_price }}</td>
               <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
               <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td>
