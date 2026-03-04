@@ -20,6 +20,7 @@ CARDS_SCRIPT = Path(os.getenv("CARDS_SCRIPT", "C:/Users/Fernando/.openclaw/works
 AUTOPILOT_LOG = Path(os.getenv("AUTOPILOT_LOG", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/autopilot_log.json"))
 AGENTS_RUNTIME = Path(os.getenv("AGENTS_RUNTIME", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/AGENTS_RUNTIME_LOCAL.json"))
 AGENTS_HEALTH = Path(os.getenv("AGENTS_HEALTH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/multiagent_health.json"))
+SOURCES_CONFIG_PATH = Path(os.getenv("SOURCES_CONFIG_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/sources_config_free.json"))
 ORDERS_PATH = Path(os.getenv("ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/orders_sim.json"))
 JOURNAL_PATH = Path(os.getenv("JOURNAL_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/trades_journal.json"))
 SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/latest_snapshot_free.json"))
@@ -205,6 +206,56 @@ def load_agents_runtime():
         return data.get("agents", []) if isinstance(data, dict) else []
     except Exception:
         return []
+
+
+def load_sources_config():
+    if not SOURCES_CONFIG_PATH.exists():
+        return {}
+    try:
+        data = json.loads(SOURCES_CONFIG_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def build_agent_sources(agents_runtime, sources_cfg):
+    macro_sources = ["FRED API", "World Bank API"]
+    market_sources = ["Finnhub", "FMP", "Alpha Vantage"]
+    news_sources = ["NewsAPI", "Reuters RSS", "MarketWatch RSS", "Investing RSS"]
+    crypto_sources = ["CoinMarketCap", "Binance Public API"]
+
+    rows = []
+    for a in agents_runtime:
+        aid = str(a.get("id", ""))
+        role = str(a.get("role", ""))
+        t = f"{aid} {role}".lower()
+
+        if "macro" in t:
+            sources = macro_sources
+            focus = "macro/liquidez"
+        elif "news" in t and "crypto" in t:
+            sources = ["NewsAPI", "CoinMarketCap"]
+            focus = "noticias cripto"
+        elif "news" in t:
+            sources = news_sources
+            focus = "noticias/catalizadores"
+        elif "technical" in t:
+            sources = ["Snapshot mercado", "Indicadores EMA/RSI/Bollinger"]
+            focus = "análisis técnico"
+        elif "risk" in t or "devil" in t:
+            sources = ["Señales compuestas", "Reglas de riesgo"]
+            focus = "riesgo y validación"
+        elif "crypto" in t:
+            sources = crypto_sources
+            focus = "scouting cripto"
+        else:
+            sources = market_sources + news_sources[:1]
+            focus = "orquestación"
+
+        where = " · ".join(sources)
+        rows.append({"agent": aid, "focus": focus, "where": where, "sources": sources})
+
+    return rows
 
 
 def load_orders():
@@ -944,6 +995,8 @@ def home(request: Request):
     autopilot_log = load_autopilot_log()
     agents_runtime = load_agents_runtime()
     agents_health = load_agents_health()
+    sources_cfg = load_sources_config()
+    agent_sources = build_agent_sources(agents_runtime, sources_cfg)
     run_status = system_status()
     orders = load_orders()
 
@@ -1063,6 +1116,11 @@ def home(request: Request):
     api_status = {
         "FINNHUB_API_KEY": bool(os.getenv("FINNHUB_API_KEY", "").strip()),
         "FMP_API_KEY": bool(os.getenv("FMP_API_KEY", "").strip()),
+        "ALPHAVANTAGE_API_KEY": bool(os.getenv("ALPHAVANTAGE_API_KEY", "").strip()),
+        "FRED_API_KEY": bool(os.getenv("FRED_API_KEY", "").strip()),
+        "NEWSAPI_KEY": bool(os.getenv("NEWSAPI_KEY", "").strip()),
+        "COINMARKETCAP_API_KEY": bool(os.getenv("COINMARKETCAP_API_KEY", "").strip()),
+        "COINGECKO_API_KEY": bool(os.getenv("COINGECKO_API_KEY", "").strip()),
         "OPENINSIDER": True,
         "YAHOO_OPTIONS": True,
         "FINVIZ": True,
@@ -1129,6 +1187,7 @@ def home(request: Request):
             "autopilot_log": autopilot_log,
             "agents_runtime": agents_runtime,
             "agents_health": agents_health,
+            "agent_sources": agent_sources,
             "agent_live": agent_live,
             "run_status": run_status,
             "orders_pending": pre_entry_orders,
