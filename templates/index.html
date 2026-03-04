@@ -789,16 +789,15 @@
         <h2>Estado de APIs/Fuentes</h2>
         <table>
           <tr><th>Fuente</th><th>Estado</th><th>Nota</th></tr>
-          <tr><td>FINNHUB_API_KEY</td><td>{{ 'OK' if api_status['FINNHUB_API_KEY'] else 'FALTA' }}</td><td>Precio/quote + news mercado USA</td></tr>
-          <tr><td>FMP_API_KEY</td><td>{{ 'OK' if api_status['FMP_API_KEY'] else 'FALTA' }}</td><td>Fundamentales + respaldo de earnings</td></tr>
-          <tr><td>ALPHAVANTAGE_API_KEY</td><td>{{ 'OK' if api_status['ALPHAVANTAGE_API_KEY'] else 'FALTA' }}</td><td>Backup de precios/fundamental</td></tr>
-          <tr><td>FRED_API_KEY</td><td>{{ 'OK' if api_status['FRED_API_KEY'] else 'FALTA' }}</td><td>Macro USA (tipos, inflación, liquidez)</td></tr>
-          <tr><td>NEWSAPI_KEY</td><td>{{ 'OK' if api_status['NEWSAPI_KEY'] else 'FALTA' }}</td><td>Catalizadores de prensa</td></tr>
-          <tr><td>COINMARKETCAP_API_KEY</td><td>{{ 'OK' if api_status['COINMARKETCAP_API_KEY'] else 'FALTA' }}</td><td>Precios/quotes cripto</td></tr>
-          <tr><td>COINGECKO_API_KEY</td><td>{{ 'OK' if api_status['COINGECKO_API_KEY'] else 'FALTA' }}</td><td>Cobertura cripto alternativa</td></tr>
-          <tr><td>OpenInsider</td><td>OK</td><td>Insider buying público (web)</td></tr>
-          <tr><td>Yahoo Options</td><td>OK</td><td>Open interest calls/puts base</td></tr>
-          <tr><td>Finviz</td><td>OK</td><td>Titulares por ticker (catalizadores)</td></tr>
+          <tr><td>FINNHUB</td><td>{{ api_status['FINNHUB'] }}</td><td>Precio/quote + news mercado USA</td></tr>
+          <tr><td>FMP</td><td>{{ api_status['FMP'] }}</td><td>Fundamentales + respaldo de earnings</td></tr>
+          <tr><td>ALPHA_VANTAGE</td><td>{{ api_status['ALPHA_VANTAGE'] }}</td><td>Backup de precios/fundamental</td></tr>
+          <tr><td>FRED</td><td>{{ api_status['FRED'] }}</td><td>Macro USA (tipos, inflación, liquidez)</td></tr>
+          <tr><td>NEWSAPI</td><td>{{ api_status['NEWSAPI'] }}</td><td>Catalizadores de prensa</td></tr>
+          <tr><td>COINGECKO</td><td>{{ api_status['COINGECKO'] }}</td><td>Cobertura cripto alternativa</td></tr>
+          <tr><td>OpenInsider</td><td>{{ api_status['OPENINSIDER'] }}</td><td>Insider buying público (web)</td></tr>
+          <tr><td>Yahoo Options</td><td>{{ api_status['YAHOO_OPTIONS'] }}</td><td>Open interest calls/puts base</td></tr>
+          <tr><td>Finviz</td><td>{{ api_status['FINVIZ'] }}</td><td>Titulares por ticker (catalizadores)</td></tr>
         </table>
         <div class="muted" style="margin-top:8px">Si quieres más precisión pro, luego pedimos APIs premium de opciones e insiders.</div>
 

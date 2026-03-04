@@ -1113,17 +1113,31 @@ def home(request: Request):
     except Exception:
         pass
 
+    def api_probe(url: str, timeout: int = 4):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "agent-ops-dashboard/1.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return (r.getcode() or 200) < 400
+        except Exception:
+            return False
+
+    finnhub_k = os.getenv("FINNHUB_API_KEY", "").strip()
+    fmp_k = os.getenv("FMP_API_KEY", "").strip()
+    av_k = os.getenv("ALPHA_VANTAGE_API_KEY", "").strip() or os.getenv("ALPHAVANTAGE_API_KEY", "").strip()
+    fred_k = os.getenv("FRED_API_KEY", "").strip()
+    news_k = os.getenv("GOOGLE_NEWS_API_KEY", "").strip() or os.getenv("NEWSAPI_KEY", "").strip()
+    cg_k = os.getenv("COINGECKO_API_KEY", "").strip()
+
     api_status = {
-        "FINNHUB_API_KEY": bool(os.getenv("FINNHUB_API_KEY", "").strip()),
-        "FMP_API_KEY": bool(os.getenv("FMP_API_KEY", "").strip()),
-        "ALPHAVANTAGE_API_KEY": bool(os.getenv("ALPHAVANTAGE_API_KEY", "").strip()),
-        "FRED_API_KEY": bool(os.getenv("FRED_API_KEY", "").strip()),
-        "NEWSAPI_KEY": bool(os.getenv("NEWSAPI_KEY", "").strip()),
-        "COINMARKETCAP_API_KEY": bool(os.getenv("COINMARKETCAP_API_KEY", "").strip()),
-        "COINGECKO_API_KEY": bool(os.getenv("COINGECKO_API_KEY", "").strip()),
-        "OPENINSIDER": True,
-        "YAHOO_OPTIONS": True,
-        "FINVIZ": True,
+        "FINNHUB": ("OK" if (finnhub_k and api_probe(f"https://finnhub.io/api/v1/quote?symbol=AAPL&token={urllib.parse.quote(finnhub_k)}")) else ("FALTA" if not finnhub_k else "ERROR")),
+        "FMP": ("OK" if (fmp_k and api_probe(f"https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey={urllib.parse.quote(fmp_k)}")) else ("FALTA" if not fmp_k else "ERROR")),
+        "ALPHA_VANTAGE": ("OK" if (av_k and api_probe(f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey={urllib.parse.quote(av_k)}")) else ("FALTA" if not av_k else "ERROR")),
+        "FRED": ("OK" if (fred_k and api_probe(f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={urllib.parse.quote(fred_k)}&file_type=json&limit=1")) else ("FALTA" if not fred_k else "ERROR")),
+        "NEWSAPI": ("OK" if (news_k and api_probe(f"https://newsapi.org/v2/top-headlines?country=us&pageSize=1&apiKey={urllib.parse.quote(news_k)}")) else ("FALTA" if not news_k else "ERROR")),
+        "COINGECKO": ("OK" if api_probe(f"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd{('&x_cg_demo_api_key=' + urllib.parse.quote(cg_k)) if cg_k else ''}") else "ERROR"),
+        "OPENINSIDER": "OK",
+        "YAHOO_OPTIONS": "OK",
+        "FINVIZ": "OK",
     }
 
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
