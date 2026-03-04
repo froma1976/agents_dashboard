@@ -28,6 +28,7 @@ BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspa
 CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_free.json"))
 CRYPTO_ORDERS_PATH = Path(os.getenv("CRYPTO_ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json"))
 CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
+LEARNING_STATUS_PATH = Path(os.getenv("LEARNING_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/learning_status.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
 
@@ -186,6 +187,16 @@ def load_crypto_snapshot():
         return data
     except Exception:
         return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
+
+
+def load_learning_status():
+    if not LEARNING_STATUS_PATH.exists():
+        return {"semaforo": "ROJO", "reason": "Sin datos suficientes", "trades_7d": 0, "expectancy_usd": 0, "profit_factor": 0}
+    try:
+        d = json.loads(LEARNING_STATUS_PATH.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {"semaforo": "ROJO", "reason": "Formato inválido", "trades_7d": 0}
+    except Exception:
+        return {"semaforo": "ROJO", "reason": "No se pudo leer learning status", "trades_7d": 0}
 
 
 def load_crypto_stream_status():
@@ -990,6 +1001,7 @@ def home(request: Request):
     signals = load_signals_snapshot()
     crypto_signals = load_crypto_snapshot()
     crypto_stream = load_crypto_stream_status()
+    learning_status = load_learning_status()
     crypto_orders = load_crypto_orders()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
@@ -1188,6 +1200,7 @@ def home(request: Request):
             "signals": signals,
             "crypto_signals": crypto_signals,
             "crypto_stream": crypto_stream,
+            "learning_status": learning_status,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed,
             "crypto_daily": crypto_orders.get("daily", {}),

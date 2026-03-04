@@ -452,6 +452,25 @@
     <div class="grid tab-section" data-tab="crypto">
       {% set cp = crypto_portfolio|default({'capital_initial_usd':300,'cash_usd':300,'market_value_usd':0,'equity_usd':300}) %}
       <div class="card col-12">
+        <h2>Semáforo de realidad (edge)</h2>
+        <p>
+          <span class="badge {{ 'ok' if learning_status.semaforo=='VERDE' else ('warn' if learning_status.semaforo=='AMARILLO' else 'no') }}">{{ learning_status.semaforo }}</span>
+          <span class="muted"> {{ learning_status.reason }}</span>
+        </p>
+        <table>
+          <tr><th>Trades 7d</th><th>Win rate</th><th>Expectancy USD/trade</th><th>Profit Factor</th><th>PnL 7d USD</th><th>Max Drawdown USD</th></tr>
+          <tr>
+            <td>{{ learning_status.trades_7d or 0 }}</td>
+            <td>{{ learning_status.win_rate or 0 }}%</td>
+            <td>{{ learning_status.expectancy_usd or 0 }}</td>
+            <td>{{ learning_status.profit_factor or 0 }}</td>
+            <td>{{ learning_status.pnl_7d_usd or 0 }}</td>
+            <td>{{ learning_status.max_drawdown_usd or 0 }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Cartera Cripto (separada)</h2>
         <p>
           Stream:
