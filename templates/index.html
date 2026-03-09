@@ -673,7 +673,7 @@
           <table>
             <tr><th>Timestamp (UTC)</th><th>Activo</th><th>Precio (USD)</th></tr>
             {% for c in quant_data %}
-            <tr><td>{{ c.ts }}</td><td>{{ c.asset }}</td><td>{{ c.price }}</td></tr>
+            <tr><td>{{ c.timestamp_utc }}</td><td>{{ c.asset }}</td><td>{{ c.price }}</td></tr>
             {% endfor %}
             {% if quant_data|length == 0 %}
             <tr><td colspan="3">Aún no hay datos quant coleccionados.</td></tr>
