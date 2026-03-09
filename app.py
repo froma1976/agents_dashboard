@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import os
 import sqlite3
 import json
@@ -49,7 +49,7 @@ def fingerprint(title: str, details: str) -> str:
 
 
 def approx_tokens(text: str) -> int:
-    # Aproximación simple y estable para telemetría local (sin SDK): ~4 chars/token
+    # AproximaciÃ³n simple y estable para telemetrÃ­a local (sin SDK): ~4 chars/token
     if not text:
         return 0
     return max(1, int(len(text) / 4))
@@ -194,7 +194,7 @@ def load_learning_status():
         return {"semaforo": "ROJO", "reason": "Sin datos suficientes", "trades_7d": 0, "expectancy_usd": 0, "profit_factor": 0}
     try:
         d = json.loads(LEARNING_STATUS_PATH.read_text(encoding="utf-8"))
-        return d if isinstance(d, dict) else {"semaforo": "ROJO", "reason": "Formato inválido", "trades_7d": 0}
+        return d if isinstance(d, dict) else {"semaforo": "ROJO", "reason": "Formato invÃ¡lido", "trades_7d": 0}
     except Exception:
         return {"semaforo": "ROJO", "reason": "No se pudo leer learning status", "trades_7d": 0}
 
@@ -252,18 +252,18 @@ def build_agent_sources(agents_runtime, sources_cfg):
             focus = "noticias/catalizadores"
         elif "technical" in t:
             sources = ["Snapshot mercado", "Indicadores EMA/RSI/Bollinger"]
-            focus = "análisis técnico"
+            focus = "anÃ¡lisis tÃ©cnico"
         elif "risk" in t or "devil" in t:
-            sources = ["Señales compuestas", "Reglas de riesgo"]
-            focus = "riesgo y validación"
+            sources = ["SeÃ±ales compuestas", "Reglas de riesgo"]
+            focus = "riesgo y validaciÃ³n"
         elif "crypto" in t:
             sources = crypto_sources
             focus = "scouting cripto"
         else:
             sources = market_sources + news_sources[:1]
-            focus = "orquestación"
+            focus = "orquestaciÃ³n"
 
-        where = " · ".join(sources)
+        where = " Â· ".join(sources)
         rows.append({"agent": aid, "focus": focus, "where": where, "sources": sources})
 
     return rows
@@ -632,7 +632,7 @@ def api_analysis(ticker: str):
         except Exception:
             pass
 
-    # vela simple desde Yahoo (últimas 60)
+    # vela simple desde Yahoo (Ãºltimas 60)
     candles = []
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(tkr)}?range=3mo&interval=1d"
@@ -654,15 +654,15 @@ def api_analysis(ticker: str):
 
     base = crow or top or row or {}
     reasons = (base.get("reasons") if isinstance(base, dict) else []) or []
-    contra = (base.get("argumento_en_contra") if isinstance(base, dict) else None) or "Sin objeción crítica detectada"
+    contra = (base.get("argumento_en_contra") if isinstance(base, dict) else None) or "Sin objeciÃ³n crÃ­tica detectada"
     decision = (base.get("decision_final") if isinstance(base, dict) else None) or "AVOID"
     confidence = (base.get("confidence_pct") if isinstance(base, dict) else None) or (base.get("score_final") if isinstance(base, dict) else None) or (base.get("score") if isinstance(base, dict) else 0) or 0
     bubble = (base.get("bubble_level") if isinstance(base, dict) else None) or "Bajo"
 
     narrativa = (
         f"{ctkr if crow else tkr}: confianza {confidence}%, burbuja {bubble}. "
-        f"Señales a favor: {', '.join(reasons[:4]) if reasons else 'sin señales fuertes'}. "
-        f"Principal objeción: {contra}. Decisión actual: {decision}."
+        f"SeÃ±ales a favor: {', '.join(reasons[:4]) if reasons else 'sin seÃ±ales fuertes'}. "
+        f"Principal objeciÃ³n: {contra}. DecisiÃ³n actual: {decision}."
     )
 
     if crow and isinstance(crow, dict):
@@ -670,8 +670,8 @@ def api_analysis(ticker: str):
         tr = crow.get("technical_report") or {}
         se = crow.get("sentiment_report") or {}
         narrativa += (
-            f" | Setup rápido: entrada {sr.get('setup',{}).get('entry','-')}, TP1 {sr.get('setup',{}).get('tp1','-')}, SL {sr.get('setup',{}).get('sl','-')}."
-            f" Sesgo técnico: {tr.get('sesgo','-')}."
+            f" | Setup rÃ¡pido: entrada {sr.get('setup',{}).get('entry','-')}, TP1 {sr.get('setup',{}).get('tp1','-')}, SL {sr.get('setup',{}).get('sl','-')}."
+            f" Sesgo tÃ©cnico: {tr.get('sesgo','-')}."
             f" Catalizador: {se.get('catalizador','-')}."
         )
 
@@ -747,7 +747,7 @@ def complete_order(order_id: str = Form(...)):
     pending = orders.get("pending", [])
     completed = orders.get("completed", [])
 
-    # Precio actual desde snapshot para calcular resultado automático
+    # Precio actual desde snapshot para calcular resultado automÃ¡tico
     signals = load_signals_snapshot()
     market = signals.get("market", []) if isinstance(signals, dict) else []
     price_map = {}
@@ -892,7 +892,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
     top = signals.get("top_opportunities", []) if isinstance(signals, dict) else []
     gpt53_budget = load_gpt53_budget()
     gpt53_allowed, gpt53_reason = should_use_gpt53(top[0] if top else None, gpt53_budget)
-    # Reserva de presupuesto cuando el caso cumple umbral crítico
+    # Reserva de presupuesto cuando el caso cumple umbral crÃ­tico
     if gpt53_allowed:
         gpt53_budget["calls_used"] = int(gpt53_budget.get("calls_used", 0)) + 1
         gpt53_budget["tokens_used"] = int(gpt53_budget.get("tokens_used", 0)) + 6000
@@ -927,7 +927,7 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
                 continue
             task_id = f"tsk_{hashlib.sha1((title + now_iso()).encode()).hexdigest()[:10]}"
             ts = now_iso()
-            # próximo ciclo aprox cada 15 minutos
+            # prÃ³ximo ciclo aprox cada 15 minutos
             now_dt = datetime.now(UTC)
             mins = (now_dt.minute // 15 + 1) * 15
             if mins >= 60:
@@ -943,12 +943,12 @@ def autopilot_run(threshold: int = Form(60), assigned_to: str = Form("alpha-scou
                 (task_id, title, details, "autopilot", assigned_to, "pending", fp, "auto-signals", ts, ts, "alta", ts, due_at, next_check),
             )
             created += 1
-            # Modo simulador dinámico: también permite WATCH para generar operativa ficticia
+            # Modo simulador dinÃ¡mico: tambiÃ©n permite WATCH para generar operativa ficticia
             if state in {"WATCH", "READY", "TRIGGERED"}:
                 if upsert_order_pending(ticker, score, state, entry_price):
                     orders_created += 1
 
-        # Telemetría de tokens por actor (estimada) para entorno local/offline
+        # TelemetrÃ­a de tokens por actor (estimada) para entorno local/offline
         market_blob = " ".join(json.dumps(x, ensure_ascii=False) for x in (signals.get("market") or []))
         news_blob = " ".join(
             (it.get("title_es") or it.get("title") or "")
@@ -1030,19 +1030,19 @@ def home(request: Request):
                 title = (row["title"] or "").lower()
 
                 if "qqq" in title:
-                    tarea_humana = "analizando el ETF tecnológico principal de EE.UU."
+                    tarea_humana = "analizando el ETF tecnolÃ³gico principal de EE.UU."
                 elif "nvda" in title:
                     tarea_humana = "analizando NVIDIA por posible oportunidad"
                 elif "msft" in title:
                     tarea_humana = "analizando Microsoft por posible oportunidad"
                 elif "executar plan" in title or "ejecutar plan" in title or "[auto]" in title:
-                    tarea_humana = "evaluando si conviene abrir una operación simulada"
+                    tarea_humana = "evaluando si conviene abrir una operaciÃ³n simulada"
                 else:
-                    tarea_humana = "revisando señales del mercado"
+                    tarea_humana = "revisando seÃ±ales del mercado"
 
-                text = f"{aid}: {st_es}; {tarea_humana}. Última actualización: {row['updated_at']}"
+                text = f"{aid}: {st_es}; {tarea_humana}. Ãšltima actualizaciÃ³n: {row['updated_at']}"
             else:
-                text = f"{aid}: en espera de nuevas señales del mercado"
+                text = f"{aid}: en espera de nuevas seÃ±ales del mercado"
             agent_live.append({"agent": aid, "text": text})
         conn.close()
     except Exception:
@@ -1051,7 +1051,7 @@ def home(request: Request):
     completed_orders = orders.get("completed", [])
     journal = load_journal()
 
-    # Enriquecer órdenes pendientes con precio actual y variación % vs entrada
+    # Enriquecer Ã³rdenes pendientes con precio actual y variaciÃ³n % vs entrada
     unrealized_usd_est = 0.0
     try:
         market_rows = signals.get("market", []) if isinstance(signals, dict) else []
@@ -1069,13 +1069,13 @@ def home(request: Request):
             cur_px = px_map.get(t)
             o["current_price"] = round(cur_px, 4) if cur_px is not None else None
             entry = o.get("entry_price")
-            o["entry_kind"] = "forzada manual" if o.get("forced") else "automática"
+            o["entry_kind"] = "forzada manual" if o.get("forced") else "automÃ¡tica"
             o["entry_status"] = "entrada abierta"
             try:
                 if cur_px is not None and entry not in (None, 0, ""):
                     entry_f = float(entry)
                     o["pct_move"] = round(((cur_px - entry_f) / entry_f) * 100, 2)
-                    # estimación simple: 1 unidad por señal
+                    # estimaciÃ³n simple: 1 unidad por seÃ±al
                     o["pnl_usd_est"] = round(cur_px - entry_f, 4)
                     unrealized_usd_est += (cur_px - entry_f)
                 else:
@@ -1087,7 +1087,7 @@ def home(request: Request):
     except Exception:
         pass
 
-    # Separar órdenes: pendientes de entrada vs activas (entrada abierta)
+    # Separar Ã³rdenes: pendientes de entrada vs activas (entrada abierta)
     pre_entry_orders = [o for o in pending_orders if o.get("entry_price") in (None, "", 0)]
     active_orders = [o for o in pending_orders if o.get("entry_price") not in (None, "", 0)]
 
@@ -1097,7 +1097,7 @@ def home(request: Request):
     total_closed = len(completed_orders)
     win_rate = round((wins / total_closed) * 100, 1) if total_closed > 0 else 0.0
 
-    # expectancy y drawdown en R-múltiplos (simulado)
+    # expectancy y drawdown en R-mÃºltiplos (simulado)
     r_values = [float(j.get("r_multiple", 0)) for j in journal if isinstance(j, dict)]
     expectancy_r = round((sum(r_values) / len(r_values)), 3) if r_values else 0.0
     cum = 0.0
@@ -1112,8 +1112,8 @@ def home(request: Request):
         max_dd = max(max_dd, dd)
     max_drawdown_r = round(max_dd, 3)
 
-    # Semáforo global de mercado (simple)
-    market_today = {"label": "NEUTRO", "color": "warn", "reason": "señales mixtas"}
+    # SemÃ¡foro global de mercado (simple)
+    market_today = {"label": "NEUTRO", "color": "warn", "reason": "seÃ±ales mixtas"}
     try:
         mr = signals.get("macro_regime", {}) if isinstance(signals, dict) else {}
         vix = mr.get("vix")
@@ -1181,6 +1181,35 @@ def home(request: Request):
         except Exception:
             o["pct_move"] = None
             o["pnl_usd_est"] = None
+
+    import csv
+    quant_data = []
+    quant_path = Path("C:/Users/Fernando/.openclaw/workspace/memory/price_warehouse.csv")
+    try:
+        if quant_path.exists():
+            with open(quant_path, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                quant_data = list(reader)
+                quant_data.reverse()
+    except Exception:
+        pass
+
+    rag_journal = []
+    journal_db = Path("C:/Users/Fernando/.openclaw/workspace/skills/trading-journal/journal_db.json")
+    try:
+        if journal_db.exists():
+            jdata = json.loads(journal_db.read_text(encoding="utf-8"))
+            if isinstance(jdata, dict) and "records" in jdata:
+                for r in jdata["records"]:
+                    rag_journal.append({
+                        "date": r.get("timestamp_utc", ""),
+                        "asset": "General/System",
+                        "action": "THESIS",
+                        "text": r.get("content", "")
+                    })
+                rag_journal.reverse()
+    except Exception:
+        pass
 
     return templates.TemplateResponse(
         "index.html",
@@ -1252,4 +1281,6 @@ def control_page():
         return HTMLResponse("Template not found", status_code=500)
     return HTMLResponse(html_path.read_text(encoding="utf-8", errors="replace"))
 # ===== END_CONTROL_PAGE =====
+
+
 
