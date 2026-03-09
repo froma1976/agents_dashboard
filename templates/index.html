@@ -135,6 +135,7 @@
       <button class="tab-btn" data-tab-btn="cartera">Cartera</button>
       <button class="tab-btn" data-tab-btn="crypto">Cripto</button>
       <button class="tab-btn" data-tab-btn="oficina">Oficina</button>
+      <button class="tab-btn" data-tab-btn="cerebro">Cerebro Local 🧬</button>
       <button class="tab-btn expert-only" data-tab-btn="agentes">Agentes</button>
       <button class="tab-btn expert-only" data-tab-btn="fuentes">Fuentes</button>
       <button class="tab-btn expert-only" data-tab-btn="tecnico">Avanzado</button>
@@ -661,6 +662,45 @@
           <div id="gpt53Alert" class="muted" style="margin-top:4px"></div>
         </div>
         <div id="agentChatLog" class="chat-log"></div>
+      </div>
+    </div>
+
+    <div class="grid tab-section" data-tab="cerebro">
+      <div class="card col-12">
+        <h2>Warehouse Historical Quant (Precios 15min)</h2>
+        <p class="muted">Datos capturados crudos directamente desde Binance para tu motor matemático sin pasar por la nube. </p>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table>
+            <tr><th>Timestamp (UTC)</th><th>Activo</th><th>Precio (USD)</th></tr>
+            {% for c in quant_data %}
+            <tr><td>{{ c.ts }}</td><td>{{ c.asset }}</td><td>{{ c.price }}</td></tr>
+            {% endfor %}
+            {% if quant_data|length == 0 %}
+            <tr><td colspan="3">Aún no hay datos quant coleccionados.</td></tr>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+      
+      <div class="card col-12">
+        <h2>RAG Memory Journal (Tesis de Inversión)</h2>
+        <p class="muted">Motor Vectorial local. Aquí el bot almacena sus tesis y contexto para el futuro.</p>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table>
+              <tr><th>Fecha</th><th>Asset</th><th>Action</th><th>Tesis guardada</th></tr>
+              {% for j in rag_journal %}
+              <tr>
+                <td>{{ j.date }}</td>
+                <td>{{ j.asset }}</td>
+                <td><span class="badge {{ 'ok' if j.action=='BUY' else ('no' if j.action=='SELL' else 'warn') }}">{{ j.action }}</span></td>
+                <td style="white-space: normal;">{{ j.text }}</td>
+              </tr>
+              {% endfor %}
+              {% if rag_journal|length == 0 %}
+              <tr><td colspan="4">Aún no hay memorias vectorizadas.</td></tr>
+              {% endif %}
+            </table>
+        </div>
       </div>
     </div>
 

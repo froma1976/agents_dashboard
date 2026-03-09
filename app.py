@@ -1220,6 +1220,8 @@ def home(request: Request):
             "orders_pending": pre_entry_orders,
             "orders_active": active_orders,
             "orders_completed": completed_orders,
+            "quant_data": quant_data[:100],
+            "rag_journal": rag_journal[:50],
             "orders_kpi": {
                 "pending": len(pre_entry_orders),
                 "active": len(active_orders),
@@ -1238,3 +1240,16 @@ def home(request: Request):
             "gpt53_budget": data.get("gpt53_budget", {"mode": "ahorro", "calls_used": 0, "max_calls": 4}),
         },
     )
+
+# ===== BEGIN_CONTROL_PAGE =====
+from pathlib import Path
+from fastapi.responses import HTMLResponse
+
+@app.get("/control", response_class=HTMLResponse)
+def control_page():
+    html_path = Path(__file__).parent / "templates" / "control.html"
+    if not html_path.exists():
+        return HTMLResponse("Template not found", status_code=500)
+    return HTMLResponse(html_path.read_text(encoding="utf-8", errors="replace"))
+# ===== END_CONTROL_PAGE =====
+
