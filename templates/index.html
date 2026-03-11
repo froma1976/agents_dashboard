@@ -1439,7 +1439,7 @@
             </tbody>
           </table>
           <script>
-            document.addEventListener("DOMContentLoaded", function () {
+            (function () {
               const quantRaw = {{ quant_data | tojson | safe
             }};
             if (!quantRaw || quantRaw.length === 0) {
@@ -1447,14 +1447,12 @@
               return;
             }
             const byAsset = {};
-            // quantRaw viene ordenado del más nuevo al más viejo
             quantRaw.forEach(row => {
               if (!byAsset[row.asset]) byAsset[row.asset] = [];
-              byAsset[row.asset].unshift({ price: parseFloat(row.price), time: row.timestamp_utc }); // reverse to chron order
+              byAsset[row.asset].unshift({ price: parseFloat(row.price), time: row.timestamp_utc });
             });
 
-            let html = "";
-            let svgIndex = 0;
+            let htmlContent = "";
             for (const asset in byAsset) {
               const data = byAsset[asset];
               const last = data[data.length - 1];
@@ -1463,10 +1461,7 @@
               const max = Math.max(...prices);
               const isUp = prices[prices.length - 1] >= prices[0];
               const color = isUp ? "#10b981" : "#ef4444";
-
-              // Generar path SVG simple
-              const w = 120;
-              const h = 30;
+              const w = 120, h = 30;
               let pathD = "";
               if (prices.length > 1 && max > min) {
                 const stepX = w / (prices.length - 1);
@@ -1478,22 +1473,20 @@
               } else if (prices.length > 0) {
                 pathD = "M0 " + (h / 2) + " L" + w + " " + (h / 2);
               }
-
-              html += `<tr>
-                  <td><strong>${asset}</strong></td>
-                  <td>${last.price}</td>
-                  <td>
-                    <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
-                       <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
-                       <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
-                    </svg>
-                  </td>
-                  <td class="muted">${last.time}</td>
-                </tr>`;
-              svgIndex++;
+              htmlContent += `<tr>
+                    <td><strong>${asset}</strong></td>
+                    <td>${last.price}</td>
+                    <td>
+                      <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
+                         <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
+                         <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
+                      </svg>
+                    </td>
+                    <td class="muted">${last.time}</td>
+                  </tr>`;
             }
-            document.getElementById("quant-table-body").innerHTML = html;
-            });
+            document.getElementById("quant-table-body").innerHTML = htmlContent;
+            }) ();
           </script>
         </div>
       </div>
@@ -1519,7 +1512,7 @@
             </tbody>
           </table>
           <script>
-            document.addEventListener("DOMContentLoaded", function () {
+            (function () {
               const stockQuantRaw = {{ stock_quant_data | tojson | safe
             }};
             if (!stockQuantRaw || stockQuantRaw.length === 0) {
@@ -1532,7 +1525,7 @@
               byStock[row.asset].unshift({ price: parseFloat(row.price), vol: row.volume, time: row.timestamp_utc });
             });
 
-            let html = "";
+            let htmlContent = "";
             for (const asset in byStock) {
               const data = byStock[asset];
               const last = data[data.length - 1];
@@ -1541,9 +1534,7 @@
               const max = Math.max(...prices);
               const isUp = prices[prices.length - 1] >= prices[0];
               const color = isUp ? "#10b981" : "#ef4444";
-
-              const w = 120;
-              const h = 30;
+              const w = 120, h = 30;
               let pathD = "";
               if (prices.length > 1 && max > min) {
                 const stepX = w / (prices.length - 1);
@@ -1555,22 +1546,21 @@
               } else if (prices.length > 0) {
                 pathD = "M0 " + (h / 2) + " L" + w + " " + (h / 2);
               }
-
-              html += `<tr>
-                  <td><strong>${asset}</strong></td>
-                  <td>${last.price}</td>
-                  <td>
-                    <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
-                       <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
-                       <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
-                    </svg>
-                  </td>
-                  <td>${last.vol}</td>
-                  <td class="muted">${last.time}</td>
-                </tr>`;
+              htmlContent += `<tr>
+                    <td><strong>${asset}</strong></td>
+                    <td>${last.price}</td>
+                    <td>
+                      <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
+                         <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
+                         <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
+                      </svg>
+                    </td>
+                    <td>${last.vol}</td>
+                    <td class="muted">${last.time}</td>
+                  </tr>`;
             }
-            document.getElementById("stock-quant-table-body").innerHTML = html;
-            });
+            document.getElementById("stock-quant-table-body").innerHTML = htmlContent;
+            }) ();
           </script>
         </div>
       </div>

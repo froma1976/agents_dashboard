@@ -3,6 +3,7 @@ import os
 import sqlite3
 import json
 import hashlib
+import csv
 import subprocess
 import urllib.request
 import urllib.parse
@@ -1201,9 +1202,8 @@ def home(request: Request):
             o["pct_move"] = None
             o["pnl_usd_est"] = None
 
-    import csv
     quant_data = []
-    quant_path = Path("C:/Users/Fernando/.openclaw/workspace/memory/price_warehouse.csv")
+    quant_path = Path(os.getenv("PRICE_WAREHOUSE_PATH", "C:/Users/Fernando/.openclaw/workspace/memory/price_warehouse.csv"))
     try:
         if quant_path.exists():
             with open(quant_path, newline='', encoding='utf-8') as f:
@@ -1214,7 +1214,7 @@ def home(request: Request):
         pass
 
     stock_quant_data = []
-    stock_quant_path = Path("C:/Users/Fernando/.openclaw/workspace/memory/stock_price_warehouse.csv")
+    stock_quant_path = Path(os.getenv("STOCK_WAREHOUSE_PATH", "C:/Users/Fernando/.openclaw/workspace/memory/stock_price_warehouse.csv"))
     try:
         if stock_quant_path.exists():
             with open(stock_quant_path, newline='', encoding='utf-8') as f:
