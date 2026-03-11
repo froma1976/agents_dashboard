@@ -583,6 +583,10 @@
         <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">
           señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif
           %}{% if signals_stale %} ⚠ stale{% endif %}</div>
+        <div class="pill" title="{{ commits[0].msg if commits|length > 0 else 'Sin commits' }}"
+          style="border-color:#2a3a5b">
+          Ref: <span style="color:#8ad4ff">{{ commits[0].hash if commits|length > 0 else 'N/D' }}</span>
+        </div>
         <a href="/control" class="pill"
           style="background:#0f172a;border-color:#35518a;color:#fff;text-decoration:none">Hub Control 🎛️</a>
         <form method="post" action="/signals/refresh" style="margin:0">
