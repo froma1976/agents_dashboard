@@ -1213,6 +1213,17 @@ def home(request: Request):
     except Exception:
         pass
 
+    stock_quant_data = []
+    stock_quant_path = Path("C:/Users/Fernando/.openclaw/workspace/memory/stock_price_warehouse.csv")
+    try:
+        if stock_quant_path.exists():
+            with open(stock_quant_path, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                stock_quant_data = list(reader)
+                stock_quant_data.reverse()
+    except Exception:
+        pass
+
     rag_journal = []
     journal_db = Path("C:/Users/Fernando/.openclaw/workspace/skills/trading-journal/journal_db.json")
     try:
@@ -1269,6 +1280,7 @@ def home(request: Request):
             "orders_active": active_orders,
             "orders_completed": completed_orders,
             "quant_data": quant_data[:100],
+            "stock_quant_data": stock_quant_data[:100],
             "rag_journal": rag_journal[:50],
             "orders_kpi": {
                 "pending": len(pre_entry_orders),

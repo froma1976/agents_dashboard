@@ -1499,6 +1499,83 @@
       </div>
 
       <div class="card col-12">
+        <h2>Warehouse Historical Quant (Acciones EE.UU.)</h2>
+        <p class="muted">Datos capturados crudos para el motor matemático sin saturar límites de API.</p>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table id="stock-quant-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Último Precio (USD)</th>
+                <th>Tendencia (Sparkline)</th>
+                <th>Volumen</th>
+                <th>Actualizado (UTC)</th>
+              </tr>
+            </thead>
+            <tbody id="stock-quant-table-body">
+              <tr>
+                <td colspan="5">Cargando gráficos quant...</td>
+              </tr>
+            </tbody>
+          </table>
+          <script>
+            document.addEventListener("DOMContentLoaded", function () {
+              const stockQuantRaw = {{ stock_quant_data | tojson | safe
+            }};
+            if (!stockQuantRaw || stockQuantRaw.length === 0) {
+              document.getElementById("stock-quant-table-body").innerHTML = "<tr><td colspan='5'>Aún no hay datos quant coleccionados.</td></tr>";
+              return;
+            }
+            const byStock = {};
+            stockQuantRaw.forEach(row => {
+              if (!byStock[row.asset]) byStock[row.asset] = [];
+              byStock[row.asset].unshift({ price: parseFloat(row.price), vol: row.volume, time: row.timestamp_utc });
+            });
+
+            let html = "";
+            for (const asset in byStock) {
+              const data = byStock[asset];
+              const last = data[data.length - 1];
+              const prices = data.map(d => d.price);
+              const min = Math.min(...prices);
+              const max = Math.max(...prices);
+              const isUp = prices[prices.length - 1] >= prices[0];
+              const color = isUp ? "#10b981" : "#ef4444";
+
+              const w = 120;
+              const h = 30;
+              let pathD = "";
+              if (prices.length > 1 && max > min) {
+                const stepX = w / (prices.length - 1);
+                pathD = prices.map((p, i) => {
+                  const dx = i * stepX;
+                  const dy = h - ((p - min) / (max - min) * h);
+                  return (i === 0 ? "M" : "L") + dx + " " + dy;
+                }).join(" ");
+              } else if (prices.length > 0) {
+                pathD = "M0 " + (h / 2) + " L" + w + " " + (h / 2);
+              }
+
+              html += `<tr>
+                  <td><strong>${asset}</strong></td>
+                  <td>${last.price}</td>
+                  <td>
+                    <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
+                       <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
+                       <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
+                    </svg>
+                  </td>
+                  <td>${last.vol}</td>
+                  <td class="muted">${last.time}</td>
+                </tr>`;
+            }
+            document.getElementById("stock-quant-table-body").innerHTML = html;
+            });
+          </script>
+        </div>
+      </div>
+
+      <div class="card col-12">
         <h2>RAG Memory Journal (Tesis de Inversión)</h2>
         <p class="muted">Motor Vectorial local. Aquí el bot almacena sus tesis y contexto para el futuro.</p>
         <div style="max-height: 400px; overflow-y: auto;">
