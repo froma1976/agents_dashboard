@@ -1,102 +1,565 @@
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Agent Ops Dashboard</title>
   <style>
-    :root{
-      --bg:#070b14; --panel:#111827cc; --line:#26324d; --txt:#eaf0ff; --muted:#93a4c9;
-      --ok:#22c55e; --warn:#f59e0b; --run:#38bdf8; --bad:#ef4444; --off:#94a3b8;
+    :root {
+      --bg: #070b14;
+      --panel: #111827cc;
+      --line: #26324d;
+      --txt: #eaf0ff;
+      --muted: #93a4c9;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --run: #38bdf8;
+      --bad: #ef4444;
+      --off: #94a3b8;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; color:var(--txt); font-family:Inter,Segoe UI,Arial,sans-serif;
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      color: var(--txt);
+      font-family: Inter, Segoe UI, Arial, sans-serif;
       background: radial-gradient(1200px 500px at 10% -10%, #1d2e5c 0%, transparent 60%),
-                  radial-gradient(900px 400px at 90% -20%, #153d4a 0%, transparent 55%),
-                  var(--bg);
+        radial-gradient(900px 400px at 90% -20%, #153d4a 0%, transparent 55%),
+        var(--bg);
     }
-    .wrap{max-width:1280px;margin:24px auto;padding:0 16px}
-    .top{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:14px}
-    h1{margin:0;font-size:28px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .card{background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 10px 30px #00000033}
-    .kpi{display:flex;flex-direction:column;gap:6px}
-    .kpi .v{font-size:28px;font-weight:700}
-    .kpi .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-    .col-3{grid-column:span 3}.col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-    h2{margin:0 0 10px;font-size:15px;color:#c6d3f2}
-    table{width:100%;border-collapse:collapse;font-size:13px;display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
-    th,td{border-bottom:1px solid #2a3a5b;padding:8px;text-align:left}
-    th{color:#b9c8ee;font-weight:600}
-    .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600}
-    .ok{background:#133a22;color:#8ee6b0}
-    .no{background:#4b1f1f;color:#ffb4b4}
-    .warn{background:#3b2c0a;color:#ffd27a}
-    .pending{background:#3b2c0a;color:#ffd27a}.running{background:#0c3147;color:#8ad4ff}
-    .done{background:#133a22;color:#8ee6b0}.blocked{background:#4b1f1f;color:#ffb4b4}
-    .cancelled{background:#374151;color:#d1d5db}
-    .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-    .pill{border:1px solid var(--line);padding:5px 10px;border-radius:999px;font-size:12px;color:#c7d4f5}
-    .dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--ok);margin-right:6px}
-    .foot{margin-top:10px;font-size:12px;color:var(--muted)}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
-    .tab-btn{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1423;color:#c7d4f5;cursor:pointer}
-    .tab-btn.active{background:#1d3b72;border-color:#35518a;color:#fff}
-    .tab-section{display:none}
-    .tab-section.active{display:grid}
-    .expert-only{display:none}
-    .office-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:12px;position:relative}
-    .room{border:1px solid #2a3a5b;border-radius:12px;padding:10px;background:linear-gradient(180deg,#0f1830,#0b1222);position:relative;overflow:hidden}
-    .room:after{content:'';position:absolute;right:-30px;top:50%;width:60px;height:1px;background:linear-gradient(90deg,#4f6ea8,transparent);opacity:.6}
-    .room h3{margin:0 0 6px;font-size:14px;color:#cfe0ff}
-    .agent-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid #35518a;background:#132340;font-size:12px}
-    .pulse{animation:pulse 1.2s infinite}
-    .conclave{margin-top:12px;padding:10px;border:1px dashed #3e5f98;border-radius:12px;background:linear-gradient(180deg,#101a31,#0c1426)}
-    .conclave-title{font-weight:700;color:#d6e5ff;margin-bottom:6px}
-    .office-map{display:grid;grid-template-columns:repeat(3,minmax(280px,1fr));gap:14px;border:1px solid #2a3a5b;border-radius:14px;background:linear-gradient(180deg,#0a1224,#0a1020);padding:14px}
-    .room-box{position:relative;border:1px solid #35518a;border-radius:12px;padding:10px 12px;font-size:12px;color:#cfe0ff;background:#0f1a33dd;line-height:1.35;min-height:130px}
-    .room-box .room-name{font-weight:700;color:#e6efff;display:block;margin-bottom:2px}
-    .room-box.conclave-room{grid-column:1/-1;min-height:160px;border-color:#3f7d57;background:linear-gradient(180deg,#10281a,#0d1d14)}
-    .room-agents{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .agent-tag{padding:6px 10px;border-radius:999px;border:1px solid #4f6ea8;background:#12284acc;color:#dbe9ff;font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .agent-tag.in-transit{background:#3b2c0acc;border-color:#9a7a2e}
-    .agent-tag.in-conclave{background:#153a22cc;border-color:#2f7a49}
-    .office-legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
-    .legend-item{font-size:12px;border:1px solid #2a3a5b;border-radius:999px;padding:4px 8px;color:#cfdcff;background:#0d162a}
-    .chat-log{margin-top:10px;border:1px solid #2a3a5b;border-radius:12px;background:linear-gradient(180deg,#0b1222,#0a1020);padding:10px;max-height:340px;overflow:auto;font-size:13px;line-height:1.55}
-    .chat-row{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
-    .chat-time{color:#93a4c9;font-size:12px;min-width:50px}
-    .chat-msg{padding:7px 10px;border-radius:10px;border:1px solid #2a3a5b;background:#111b31;max-width:100%}
-    .modal-backdrop{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:9999}
-    .modal{width:min(980px,95vw);max-height:90vh;overflow:auto;background:#0d1423;border:1px solid #35518a;border-radius:14px;padding:14px}
-    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(56,189,248,.55)}70%{box-shadow:0 0 0 10px rgba(56,189,248,0)}100%{box-shadow:0 0 0 0 rgba(56,189,248,0)}}
-    body.expert .expert-only{display:inline-flex}
-    .simple-note{display:inline-flex}
-    body.expert .simple-note{display:none}
-    @media (max-width:960px){.col-3,.col-4,.col-6,.col-8{grid-column:span 12}}
-    @media (max-width:640px){
-      .wrap{margin:12px auto;padding:0 10px}
-      .top{flex-direction:column;align-items:flex-start;gap:10px}
-      h1{font-size:22px;line-height:1.2}
-      .muted{font-size:12px}
-      .right{width:100%;justify-content:flex-start}
-      .pill{font-size:11px;padding:5px 8px}
-      .tab-btn{padding:7px 10px;font-size:12px}
-      .card{padding:10px;border-radius:12px}
-      .kpi .v{font-size:22px}
-      th,td{padding:7px;font-size:12px}
-      .foot{font-size:11px}
+
+    .wrap {
+      max-width: 1280px;
+      margin: 24px auto;
+      padding: 0 16px
+    }
+
+    .top {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 30px #00000033
+    }
+
+    .kpi {
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .kpi .v {
+      font-size: 28px;
+      font-weight: 700
+    }
+
+    .kpi .l {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em
+    }
+
+    .col-3 {
+      grid-column: span 3
+    }
+
+    .col-4 {
+      grid-column: span 4
+    }
+
+    .col-6 {
+      grid-column: span 6
+    }
+
+    .col-8 {
+      grid-column: span 8
+    }
+
+    .col-12 {
+      grid-column: span 12
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      color: #c6d3f2
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #2a3a5b;
+      padding: 8px;
+      text-align: left
+    }
+
+    th {
+      color: #b9c8ee;
+      font-weight: 600
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .ok {
+      background: #133a22;
+      color: #8ee6b0
+    }
+
+    .no {
+      background: #4b1f1f;
+      color: #ffb4b4
+    }
+
+    .warn {
+      background: #3b2c0a;
+      color: #ffd27a
+    }
+
+    .pending {
+      background: #3b2c0a;
+      color: #ffd27a
+    }
+
+    .running {
+      background: #0c3147;
+      color: #8ad4ff
+    }
+
+    .done {
+      background: #133a22;
+      color: #8ee6b0
+    }
+
+    .blocked {
+      background: #4b1f1f;
+      color: #ffb4b4
+    }
+
+    .cancelled {
+      background: #374151;
+      color: #d1d5db
+    }
+
+    .right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #c7d4f5
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: var(--ok);
+      margin-right: 6px
+    }
+
+    .foot {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px
+    }
+
+    .tab-btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0d1423;
+      color: #c7d4f5;
+      cursor: pointer
+    }
+
+    .tab-btn.active {
+      background: #1d3b72;
+      border-color: #35518a;
+      color: #fff
+    }
+
+    .tab-section {
+      display: none
+    }
+
+    .tab-section.active {
+      display: grid
+    }
+
+    .expert-only {
+      display: none
+    }
+
+    .office-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+      position: relative
+    }
+
+    .room {
+      border: 1px solid #2a3a5b;
+      border-radius: 12px;
+      padding: 10px;
+      background: linear-gradient(180deg, #0f1830, #0b1222);
+      position: relative;
+      overflow: hidden
+    }
+
+    .room:after {
+      content: '';
+      position: absolute;
+      right: -30px;
+      top: 50%;
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, #4f6ea8, transparent);
+      opacity: .6
+    }
+
+    .room h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      color: #cfe0ff
+    }
+
+    .agent-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid #35518a;
+      background: #132340;
+      font-size: 12px
+    }
+
+    .pulse {
+      animation: pulse 1.2s infinite
+    }
+
+    .conclave {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px dashed #3e5f98;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #101a31, #0c1426)
+    }
+
+    .conclave-title {
+      font-weight: 700;
+      color: #d6e5ff;
+      margin-bottom: 6px
+    }
+
+    .office-map {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 1fr));
+      gap: 14px;
+      border: 1px solid #2a3a5b;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #0a1224, #0a1020);
+      padding: 14px
+    }
+
+    .room-box {
+      position: relative;
+      border: 1px solid #35518a;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #cfe0ff;
+      background: #0f1a33dd;
+      line-height: 1.35;
+      min-height: 130px
+    }
+
+    .room-box .room-name {
+      font-weight: 700;
+      color: #e6efff;
+      display: block;
+      margin-bottom: 2px
+    }
+
+    .room-box.conclave-room {
+      grid-column: 1/-1;
+      min-height: 160px;
+      border-color: #3f7d57;
+      background: linear-gradient(180deg, #10281a, #0d1d14)
+    }
+
+    .room-agents {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .agent-tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #4f6ea8;
+      background: #12284acc;
+      color: #dbe9ff;
+      font-size: 12px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .agent-tag.in-transit {
+      background: #3b2c0acc;
+      border-color: #9a7a2e
+    }
+
+    .agent-tag.in-conclave {
+      background: #153a22cc;
+      border-color: #2f7a49
+    }
+
+    .office-legend {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 0
+    }
+
+    .legend-item {
+      font-size: 12px;
+      border: 1px solid #2a3a5b;
+      border-radius: 999px;
+      padding: 4px 8px;
+      color: #cfdcff;
+      background: #0d162a
+    }
+
+    .chat-log {
+      margin-top: 10px;
+      border: 1px solid #2a3a5b;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #0b1222, #0a1020);
+      padding: 10px;
+      max-height: 340px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.55
+    }
+
+    .chat-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin: 6px 0
+    }
+
+    .chat-time {
+      color: #93a4c9;
+      font-size: 12px;
+      min-width: 50px
+    }
+
+    .chat-msg {
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid #2a3a5b;
+      background: #111b31;
+      max-width: 100%
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: #0008;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999
+    }
+
+    .modal {
+      width: min(980px, 95vw);
+      max-height: 90vh;
+      overflow: auto;
+      background: #0d1423;
+      border: 1px solid #35518a;
+      border-radius: 14px;
+      padding: 14px
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(56, 189, 248, .55)
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px rgba(56, 189, 248, 0)
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(56, 189, 248, 0)
+      }
+    }
+
+    body.expert .expert-only {
+      display: inline-flex
+    }
+
+    .simple-note {
+      display: inline-flex
+    }
+
+    body.expert .simple-note {
+      display: none
+    }
+
+    @media (max-width:960px) {
+
+      .col-3,
+      .col-4,
+      .col-6,
+      .col-8 {
+        grid-column: span 12
+      }
+    }
+
+    @media (max-width:640px) {
+      .wrap {
+        margin: 12px auto;
+        padding: 0 10px
+      }
+
+      .top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px
+      }
+
+      h1 {
+        font-size: 22px;
+        line-height: 1.2
+      }
+
+      .muted {
+        font-size: 12px
+      }
+
+      .right {
+        width: 100%;
+        justify-content: flex-start
+      }
+
+      .pill {
+        font-size: 11px;
+        padding: 5px 8px
+      }
+
+      .tab-btn {
+        padding: 7px 10px;
+        font-size: 12px
+      }
+
+      .card {
+        padding: 10px;
+        border-radius: 12px
+      }
+
+      .kpi .v {
+        font-size: 22px
+      }
+
+      th,
+      td {
+        padding: 7px;
+        font-size: 12px
+      }
+
+      .foot {
+        font-size: 11px
+      }
 
       /* Oficina en móvil: cajas en una columna */
-      .office-map{grid-template-columns:1fr;padding:10px;gap:10px}
-      .room-box{font-size:12px;min-height:120px}
-      .room-box.conclave-room{grid-column:auto}
-      .room:after{display:none}
+      .office-map {
+        grid-template-columns: 1fr;
+        padding: 10px;
+        gap: 10px
+      }
+
+      .room-box {
+        font-size: 12px;
+        min-height: 120px
+      }
+
+      .room-box.conclave-room {
+        grid-column: auto
+      }
+
+      .room:after {
+        display: none
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="top">
@@ -111,14 +574,24 @@
           Sistema: <span class="badge {{ run_status.color }}" style="margin-left:6px">{{ run_status.status }}</span>
         </div>
         <div class="pill" style="border-color:#2a3a5b">
-          Modo: <span class="badge {{ 'ok' if run_status.mode=='NORMAL' else 'warn' }}" style="margin-left:6px">{{ run_status.mode }}</span>
+          Modo: <span class="badge {{ 'ok' if run_status.mode=='NORMAL' else 'warn' }}" style="margin-left:6px">{{
+            run_status.mode }}</span>
         </div>
         <div class="pill" style="border-color:#2a3a5b">
           Consejo local (Qwen3) {{ gpt53_budget.mode }}: {{ gpt53_budget.calls_used }}/{{ gpt53_budget.max_calls }}
         </div>
-        <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif %}{% if signals_stale %} ⚠ stale{% endif %}</div>
+        <div class="pill" style="{% if signals_stale %}border-color:#7a2e2e;color:#ffb4b4;background:#311;{% endif %}">
+          señales: {% if signals.freshness_min is not none %}hace {{ signals.freshness_min }} min{% else %}N/D{% endif
+          %}{% if signals_stale %} ⚠ stale{% endif %}</div>
         <form method="post" action="/signals/refresh" style="margin:0">
-          <button type="submit" class="pill" style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
+          <button type="submit" class="pill"
+            style="background:#1d3b72;border-color:#35518a;color:#fff;cursor:pointer">Actualizar señales</button>
+        </form>
+        <form method="post" action="/kill_switch" style="margin:0"
+          onsubmit="return confirm('¿Seguro quieres activar el Kill Switch? Esto pausará el trading y cerrará operaciones abiertas.');">
+          <button type="submit" class="pill pulse"
+            style="background:#b91c1c;border-color:#ef4444;color:#fff;cursor:pointer;font-weight:bold;box-shadow:0 0 10px #ef4444">EMERGENCIA
+            STOP</button>
         </form>
       </div>
     </div>
@@ -151,7 +624,8 @@
           <span class="muted"> — {{ market_today.reason }}</span>
         </p>
         <p class="muted" style="margin-top:6px">
-          Salud automática: snapshot hace {{ run_status.snapshot_min if run_status.snapshot_min is not none else 'N/D' }} min,
+          Salud automática: snapshot hace {{ run_status.snapshot_min if run_status.snapshot_min is not none else 'N/D'
+          }} min,
           autopilot hace {{ run_status.autopilot_min if run_status.autopilot_min is not none else 'N/D' }} min,
           backup hace {{ run_status.backup_min if run_status.backup_min is not none else 'N/D' }} min,
           LLM local: {{ 'OK' if run_status.llm_ok else 'degradado' }}.
@@ -164,100 +638,163 @@
         {% set top = top_ops[0] if top_ops|length > 0 else None %}
         <p>
           {% if top %}
-            Mejor oportunidad actual: <strong>{{ top.ticker }}</strong> (estado: <strong>{{ top.state or 'WATCH' }}</strong>, score: <strong>{{ top.score_final or top.score }}</strong>).
-            Acción sugerida: <strong>{% if (top.state or 'WATCH') == 'TRIGGERED' %}ejecución simulada{% elif (top.state or 'WATCH') == 'READY' %}vigilar de cerca{% else %}esperar confirmación{% endif %}</strong>.
+          Mejor oportunidad actual: <strong>{{ top.ticker }}</strong> (estado: <strong>{{ top.state or 'WATCH'
+            }}</strong>, score: <strong>{{ top.score_final or top.score }}</strong>).
+          Acción sugerida: <strong>{% if (top.state or 'WATCH') == 'TRIGGERED' %}ejecución simulada{% elif (top.state or
+            'WATCH') == 'READY' %}vigilar de cerca{% else %}esperar confirmación{% endif %}</strong>.
           {% else %}
-            Sin oportunidades claras ahora. Acción sugerida: esperar actualización.
+          Sin oportunidades claras ahora. Acción sugerida: esperar actualización.
           {% endif %}
         </p>
       </div>
 
-      <div class="card col-3 kpi"><div class="l">Total tareas</div><div class="v">{{ total_tasks }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Modelos activos</div><div class="v">{{ total_models }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Tokens acumulados</div><div class="v">{{ total_tokens }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Cron registradas</div><div class="v">{{ cron_rows|length }}</div></div>
+      <div class="card col-3 kpi">
+        <div class="l">Total tareas</div>
+        <div class="v">{{ total_tasks }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Modelos activos</div>
+        <div class="v">{{ total_models }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Tokens acumulados</div>
+        <div class="v">{{ total_tokens }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Cron registradas</div>
+        <div class="v">{{ cron_rows|length }}</div>
+      </div>
 
-      <div class="card col-3 kpi"><div class="l">Equity (USD)</div><div class="v">{{ '%.2f'|format(portfolio_equity_usd) }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Cash (USD)</div><div class="v">{{ '%.2f'|format(portfolio_cash_usd) }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Market Value</div><div class="v">{{ '%.2f'|format(portfolio_market_value_usd) }}</div></div>
-      <div class="card col-3 kpi"><div class="l">Posiciones</div><div class="v">{{ portfolio_positions|length }}</div></div>
+      <div class="card col-3 kpi">
+        <div class="l">Equity (USD)</div>
+        <div class="v">{{ '%.2f'|format(portfolio_equity_usd) }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Cash (USD)</div>
+        <div class="v">{{ '%.2f'|format(portfolio_cash_usd) }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Market Value</div>
+        <div class="v">{{ '%.2f'|format(portfolio_market_value_usd) }}</div>
+      </div>
+      <div class="card col-3 kpi">
+        <div class="l">Posiciones</div>
+        <div class="v">{{ portfolio_positions|length }}</div>
+      </div>
 
       <div class="card col-4">
         <h2>Tareas por estado</h2>
         <table>
-          <tr><th>Estado</th><th>Cantidad</th></tr>
+          <tr>
+            <th>Estado</th>
+            <th>Cantidad</th>
+          </tr>
           {% for r in task_counts %}
-            {% set st = r.status %}
-            {% if st == 'pending' %}{% set st_es = 'pendiente' %}
-            {% elif st == 'running' %}{% set st_es = 'en curso' %}
-            {% elif st == 'done' %}{% set st_es = 'hecha' %}
-            {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
-            {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
-            {% else %}{% set st_es = st %}{% endif %}
-            <tr><td><span class="badge {{ r.status }}">{{ st_es }}</span></td><td>{{ r.c }}</td></tr>
+          {% set st = r.status %}
+          {% if st == 'pending' %}{% set st_es = 'pendiente' %}
+          {% elif st == 'running' %}{% set st_es = 'en curso' %}
+          {% elif st == 'done' %}{% set st_es = 'hecha' %}
+          {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
+          {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+          {% else %}{% set st_es = st %}{% endif %}
+          <tr>
+            <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
+            <td>{{ r.c }}</td>
+          </tr>
           {% endfor %}
-          {% if task_counts|length == 0 %}<tr><td colspan="2">Sin datos</td></tr>{% endif %}
+          {% if task_counts|length == 0 %}<tr>
+            <td colspan="2">Sin datos</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-8">
         <h2>Tokens por modelo</h2>
         <table>
-          <tr><th>Modelo</th><th>In</th><th>Out</th><th>Total</th></tr>
+          <tr>
+            <th>Modelo</th>
+            <th>In</th>
+            <th>Out</th>
+            <th>Total</th>
+          </tr>
           {% for r in token_by_model %}
-            <tr><td>{{ r.model }}</td><td>{{ r.tin or 0 }}</td><td>{{ r.tout or 0 }}</td><td>{{ r.total or 0 }}</td></tr>
+          <tr>
+            <td>{{ r.model }}</td>
+            <td>{{ r.tin or 0 }}</td>
+            <td>{{ r.tout or 0 }}</td>
+            <td>{{ r.total or 0 }}</td>
+          </tr>
           {% endfor %}
-          {% if token_by_model|length == 0 %}<tr><td colspan="4">Sin datos</td></tr>{% endif %}
+          {% if token_by_model|length == 0 %}<tr>
+            <td colspan="4">Sin datos</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Qué están haciendo los agentes (en lenguaje normal)</h2>
         <table>
-          <tr><th>Estado</th><th>Agente</th><th>Qué está haciendo</th><th>Actualizado</th></tr>
+          <tr>
+            <th>Estado</th>
+            <th>Agente</th>
+            <th>Qué está haciendo</th>
+            <th>Actualizado</th>
+          </tr>
           {% for r in recent_tasks[:8] %}
-            {% set st = r.status %}
-            {% if st == 'pending' %}{% set st_es = 'en espera' %}
-            {% elif st == 'running' %}{% set st_es = 'trabajando' %}
-            {% elif st == 'done' %}{% set st_es = 'terminado' %}
-            {% elif st == 'blocked' %}{% set st_es = 'bloqueado' %}
-            {% elif st == 'cancelled' %}{% set st_es = 'cancelado' %}
-            {% else %}{% set st_es = st %}{% endif %}
+          {% set st = r.status %}
+          {% if st == 'pending' %}{% set st_es = 'en espera' %}
+          {% elif st == 'running' %}{% set st_es = 'trabajando' %}
+          {% elif st == 'done' %}{% set st_es = 'terminado' %}
+          {% elif st == 'blocked' %}{% set st_es = 'bloqueado' %}
+          {% elif st == 'cancelled' %}{% set st_es = 'cancelado' %}
+          {% else %}{% set st_es = st %}{% endif %}
 
-            {% set t = (r.title or '')|lower %}
-            {% if 'qqq' in t %}
-              {% set tarea_humana = 'Analizando el principal ETF tecnológico de EE.UU.' %}
-            {% elif 'spy' in t %}
-              {% set tarea_humana = 'Analizando el índice general del mercado de EE.UU.' %}
-            {% elif 'iwm' in t %}
-              {% set tarea_humana = 'Analizando small caps de EE.UU. para detectar impulso.' %}
-            {% elif 'nvda' in t %}
-              {% set tarea_humana = 'Analizando NVIDIA por posible oportunidad.' %}
-            {% elif '[auto]' in t or 'ejecutar plan' in t %}
-              {% set tarea_humana = 'Evaluando si conviene abrir una operación simulada.' %}
-            {% else %}
-              {% set tarea_humana = 'Revisando señales del mercado y riesgo.' %}
-            {% endif %}
+          {% set t = (r.title or '')|lower %}
+          {% if 'qqq' in t %}
+          {% set tarea_humana = 'Analizando el principal ETF tecnológico de EE.UU.' %}
+          {% elif 'spy' in t %}
+          {% set tarea_humana = 'Analizando el índice general del mercado de EE.UU.' %}
+          {% elif 'iwm' in t %}
+          {% set tarea_humana = 'Analizando small caps de EE.UU. para detectar impulso.' %}
+          {% elif 'nvda' in t %}
+          {% set tarea_humana = 'Analizando NVIDIA por posible oportunidad.' %}
+          {% elif '[auto]' in t or 'ejecutar plan' in t %}
+          {% set tarea_humana = 'Evaluando si conviene abrir una operación simulada.' %}
+          {% else %}
+          {% set tarea_humana = 'Revisando señales del mercado y riesgo.' %}
+          {% endif %}
 
-            <tr>
-              <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
-              <td>{{ r.assigned_to }}</td>
-              <td>{{ tarea_humana }}</td>
-              <td>{{ r.updated_at }}</td>
-            </tr>
+          <tr>
+            <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
+            <td>{{ r.assigned_to }}</td>
+            <td>{{ tarea_humana }}</td>
+            <td>{{ r.updated_at }}</td>
+          </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="4">Sin tareas todavía</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr>
+            <td colspan="4">Sin tareas todavía</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12 expert-only">
         <h2>Historial de commits (últimos cambios)</h2>
         <table>
-          <tr><th>Commit</th><th>Fecha</th><th>Mensaje</th></tr>
+          <tr>
+            <th>Commit</th>
+            <th>Fecha</th>
+            <th>Mensaje</th>
+          </tr>
           {% for c in commits %}
-            <tr><td><code>{{ c.hash }}</code></td><td>{{ c.date }}</td><td>{{ c.msg }}</td></tr>
+          <tr>
+            <td><code>{{ c.hash }}</code></td>
+            <td>{{ c.date }}</td>
+            <td>{{ c.msg }}</td>
+          </tr>
           {% endfor %}
-          {% if commits|length == 0 %}<tr><td colspan="3">Sin datos de git</td></tr>{% endif %}
+          {% if commits|length == 0 %}<tr>
+            <td colspan="3">Sin datos de git</td>
+          </tr>{% endif %}
         </table>
       </div>
 
@@ -267,13 +804,21 @@
       <div class="card col-12">
         <h2>Cartera (USD) — vista simple</h2>
         <table>
-          <tr><th>Capital inicial</th><th>Cash</th><th>Valor posiciones</th><th>Equity base</th><th>Equity total (incl. PnL activo est.)</th><th>Nº posiciones</th></tr>
+          <tr>
+            <th>Capital inicial</th>
+            <th>Cash</th>
+            <th>Valor posiciones</th>
+            <th>Equity base</th>
+            <th>Equity total (incl. PnL activo est.)</th>
+            <th>Nº posiciones</th>
+          </tr>
           <tr>
             <td>{{ portfolio.capital_initial_usd if portfolio.capital_initial_usd is not none else '-' }}</td>
             <td>{{ '%.2f'|format(portfolio_cash_usd) }}</td>
             <td>{{ '%.2f'|format(portfolio_market_value_usd) }}</td>
             <td>{{ '%.2f'|format(portfolio_equity_usd) }}</td>
-            <td><span class="badge {{ 'ok' if (orders_kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{ '%.2f'|format(portfolio_equity_live_est) }}</span></td>
+            <td><span class="badge {{ 'ok' if (orders_kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{
+                '%.2f'|format(portfolio_equity_live_est) }}</span></td>
             <td>{{ portfolio_positions|length }}</td>
           </tr>
         </table>
@@ -283,7 +828,18 @@
         <h2>KPIs de rendimiento (simulado)</h2>
         {% set kpi = orders_kpi|default({'pending':0,'closed':0,'wins':0,'losses':0,'neutral':0,'win_rate':0}) %}
         <table>
-          <tr><th>Pendientes de entrada</th><th>Órdenes activas</th><th>Órdenes cerradas</th><th>Ganadas</th><th>Perdidas</th><th>Neutrales</th><th>Win Rate</th><th>Expectancy (R)</th><th>Max Drawdown (R)</th><th>PnL activo (USD est.)</th></tr>
+          <tr>
+            <th>Pendientes de entrada</th>
+            <th>Órdenes activas</th>
+            <th>Órdenes cerradas</th>
+            <th>Ganadas</th>
+            <th>Perdidas</th>
+            <th>Neutrales</th>
+            <th>Win Rate</th>
+            <th>Expectancy (R)</th>
+            <th>Max Drawdown (R)</th>
+            <th>PnL activo (USD est.)</th>
+          </tr>
           <tr>
             <td>{{ kpi.pending }}</td>
             <td>{{ kpi.active }}</td>
@@ -294,58 +850,118 @@
             <td>{{ kpi.win_rate }}%</td>
             <td>{{ kpi.expectancy_r }}</td>
             <td>{{ kpi.max_drawdown_r }}</td>
-            <td><span class="badge {{ 'ok' if (kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{ kpi.unrealized_usd_est }}</span></td>
+            <td><span class="badge {{ 'ok' if (kpi.unrealized_usd_est or 0) >= 0 else 'no' }}">{{ kpi.unrealized_usd_est
+                }}</span></td>
           </tr>
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Drawdown visual (equity en R)</h2>
-        <svg id="equityChart" viewBox="0 0 600 180" style="width:100%;height:180px;border:1px solid #2a3a5b;border-radius:10px;background:#0d1423"></svg>
+        <svg id="equityChart" viewBox="0 0 600 180"
+          style="width:100%;height:180px;border:1px solid #2a3a5b;border-radius:10px;background:#0d1423"></svg>
         <div class="muted">Curva acumulada basada en resultados cerrados (R múltiplos).</div>
       </div>
 
       <div class="card col-12">
         <h2>Órdenes activas (ya entramos)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Tipo</th><th>Score</th><th>Entrada</th><th>Precio actual</th><th>% desde entrada</th><th>PnL USD est.</th><th>Target</th><th>Stop</th><th>Creada</th><th>Cierre manual (opcional)</th></tr>
+          <tr>
+            <th>Ticker</th>
+            <th>Estado</th>
+            <th>Tipo</th>
+            <th>Score</th>
+            <th>Entrada</th>
+            <th>Precio actual</th>
+            <th>% desde entrada</th>
+            <th>PnL USD est.</th>
+            <th>Target</th>
+            <th>Stop</th>
+            <th>Creada</th>
+            <th>Cierre manual (opcional)</th>
+          </tr>
           {% for o in orders_active %}
-            {% set st = o.state or 'WATCH' %}
-            {% set st_human = 'ACTIVA' %}
-            <tr>
-              <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}')">{{ o.ticker }}</button></td><td>{{ st_human }}</td><td>{{ o.entry_kind or 'automática' }}</td><td>{{ o.score }}</td><td>{{ o.entry_price or '-' }}</td><td>{{ o.current_price if o.current_price is not none else '-' }}</td><td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td><td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td><td>{{ o.target_price or '-' }}</td><td>{{ o.stop_price or '-' }}</td><td>{{ o.created_at }}</td>
-              <td>
-                <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
-                  <input type="hidden" name="order_id" value="{{ o.id }}" />
-                  <button type="submit" style="padding:6px 10px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Cerrar manual</button>
-                </form>
-              </td>
-            </tr>
+          {% set st = o.state or 'WATCH' %}
+          {% set st_human = 'ACTIVA' %}
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}')">{{ o.ticker }}</button>
+            </td>
+            <td>{{ st_human }}</td>
+            <td>{{ o.entry_kind or 'automática' }}</td>
+            <td>{{ o.score }}</td>
+            <td>{{ o.entry_price or '-' }}</td>
+            <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
+            <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move
+                }}%</span>{% else %}-{% endif %}</td>
+            <td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{
+                o.pnl_usd_est }}</span>{% else %}-{% endif %}</td>
+            <td>{{ o.target_price or '-' }}</td>
+            <td>{{ o.stop_price or '-' }}</td>
+            <td>{{ o.created_at }}</td>
+            <td>
+              <form method="post" action="/orders/complete" style="display:flex;gap:6px;align-items:center">
+                <input type="hidden" name="order_id" value="{{ o.id }}" />
+                <button type="submit"
+                  style="padding:6px 10px;border-radius:8px;border:1px solid #35518a;background:#1d3b72;color:#fff;cursor:pointer">Cerrar
+                  manual</button>
+              </form>
+            </td>
+          </tr>
           {% endfor %}
-          {% if orders_active|length == 0 %}<tr><td colspan="12">Sin órdenes activas</td></tr>{% endif %}
+          {% if orders_active|length == 0 %}<tr>
+            <td colspan="12">Sin órdenes activas</td>
+          </tr>{% endif %}
         </table>
-        <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs entrada. PnL USD es una estimación rápida por unidad.</div>
+        <div class="muted" style="margin-top:8px">Cierre automático: el sistema marca ganada/perdida según Target/Stop
+          en precio real. "Cerrar manual" fuerza cierre y calcula resultado automáticamente con precio actual vs
+          entrada. PnL USD es una estimación rápida por unidad.</div>
       </div>
 
       <div class="card col-12">
         <h2>Pendientes de entrada (aún no ejecutadas)</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Estado</th><th>Score</th><th>Creada</th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Ticker</th>
+            <th>Estado</th>
+            <th>Score</th>
+            <th>Creada</th>
+          </tr>
           {% for o in orders_pending %}
-            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.state or 'WATCH' }}</td><td>{{ o.score }}</td><td>{{ o.created_at }}</td></tr>
+          <tr>
+            <td>{{ o.id }}</td>
+            <td>{{ o.ticker }}</td>
+            <td>{{ o.state or 'WATCH' }}</td>
+            <td>{{ o.score }}</td>
+            <td>{{ o.created_at }}</td>
+          </tr>
           {% endfor %}
-          {% if orders_pending|length == 0 %}<tr><td colspan="5">No hay pendientes de entrada</td></tr>{% endif %}
+          {% if orders_pending|length == 0 %}<tr>
+            <td colspan="5">No hay pendientes de entrada</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Órdenes completadas</h2>
         <table>
-          <tr><th>ID</th><th>Ticker</th><th>Resultado</th><th>Cerrada</th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Ticker</th>
+            <th>Resultado</th>
+            <th>Cerrada</th>
+          </tr>
           {% for o in orders_completed %}
-            <tr><td>{{ o.id }}</td><td>{{ o.ticker }}</td><td>{{ o.result or '-' }}</td><td>{{ o.closed_at or '-' }}</td></tr>
+          <tr>
+            <td>{{ o.id }}</td>
+            <td>{{ o.ticker }}</td>
+            <td>{{ o.result or '-' }}</td>
+            <td>{{ o.closed_at or '-' }}</td>
+          </tr>
           {% endfor %}
-          {% if orders_completed|length == 0 %}<tr><td colspan="4">Sin órdenes completadas</td></tr>{% endif %}
+          {% if orders_completed|length == 0 %}<tr>
+            <td colspan="4">Sin órdenes completadas</td>
+          </tr>{% endif %}
         </table>
       </div>
     </div>
@@ -353,34 +969,56 @@
     <div class="grid tab-section" data-tab="fuentes">
       <div class="card col-12">
         <h2>Señales gratis (snapshot)</h2>
-        <div class="muted" style="margin-bottom:8px">Generado: {{ signals.generated_at or 'N/D' }} {% if signals_stale %}<span style="color:#ffb4b4">(desactualizado)</span>{% endif %}</div>
+        <div class="muted" style="margin-bottom:8px">Generado: {{ signals.generated_at or 'N/D' }} {% if signals_stale
+          %}<span style="color:#ffb4b4">(desactualizado)</span>{% endif %}</div>
         <div class="grid" style="grid-template-columns: repeat(12,1fr); gap:10px;">
           <div class="col-4" style="grid-column: span 4;">
             <h2>Macro (FRED)</h2>
             <table>
-              <tr><th>Serie</th><th>Último</th><th>Fecha</th></tr>
+              <tr>
+                <th>Serie</th>
+                <th>Último</th>
+                <th>Fecha</th>
+              </tr>
               {% for m in signals.macro[:6] %}
-                <tr><td>{{ m.series }}</td><td>{{ m.latest_value or '-' }}</td><td>{{ m.latest_date or '-' }}</td></tr>
+              <tr>
+                <td>{{ m.series }}</td>
+                <td>{{ m.latest_value or '-' }}</td>
+                <td>{{ m.latest_date or '-' }}</td>
+              </tr>
               {% endfor %}
             </table>
           </div>
           <div class="col-4" style="grid-column: span 4;">
             <h2>Market (Yahoo)</h2>
             <table>
-              <tr><th>Ticker</th><th>Precio</th><th>Exch</th></tr>
+              <tr>
+                <th>Ticker</th>
+                <th>Precio</th>
+                <th>Exch</th>
+              </tr>
               {% for s in signals.market[:8] %}
-                <tr><td>{{ s.ticker }}</td><td>{{ s.regularMarketPrice or '-' }}</td><td>{{ s.exchange or '-' }}</td></tr>
+              <tr>
+                <td>{{ s.ticker }}</td>
+                <td>{{ s.regularMarketPrice or '-' }}</td>
+                <td>{{ s.exchange or '-' }}</td>
+              </tr>
               {% endfor %}
             </table>
           </div>
           <div class="col-4" style="grid-column: span 4;">
             <h2>News (RSS)</h2>
             <table>
-              <tr><th>Titular</th></tr>
+              <tr>
+                <th>Titular</th>
+              </tr>
               {% for feed in signals.news[:4] %}
-                {% for item in feed['items'][:2] %}
-                  <tr><td><a href="{{ item.link }}" target="_blank" style="color:#9ec5ff">{{ item.title_es or item.title }}</a></td></tr>
-                {% endfor %}
+              {% for item in feed['items'][:2] %}
+              <tr>
+                <td><a href="{{ item.link }}" target="_blank" style="color:#9ec5ff">{{ item.title_es or item.title
+                    }}</a></td>
+              </tr>
+              {% endfor %}
               {% endfor %}
             </table>
           </div>
@@ -392,20 +1030,28 @@
             {% set social = (signals.get('social', []) if signals else []) %}
 
             <table>
-              <tr><th>Símbolo</th><th>Mensajes</th><th>Bullish</th><th>Bearish</th><th>Score Sentimiento</th></tr>
+              <tr>
+                <th>Símbolo</th>
+                <th>Mensajes</th>
+                <th>Bullish</th>
+                <th>Bearish</th>
+                <th>Score Sentimiento</th>
+              </tr>
 
               {% for s in social[:8] %}
-                <tr>
-                  <td>{{ s.symbol }}</td>
-                  <td>{{ s.messages_checked or '-' }}</td>
-                  <td>{{ s.bullish or 0 }}</td>
-                  <td>{{ s.bearish or 0 }}</td>
-                  <td>{{ s.sentiment_score if s.sentiment_score is not none else '-' }}</td>
-                </tr>
+              <tr>
+                <td>{{ s.symbol }}</td>
+                <td>{{ s.messages_checked or '-' }}</td>
+                <td>{{ s.bullish or 0 }}</td>
+                <td>{{ s.bearish or 0 }}</td>
+                <td>{{ s.sentiment_score if s.sentiment_score is not none else '-' }}</td>
+              </tr>
               {% endfor %}
 
               {% if social|length == 0 %}
-                <tr><td colspan="5">Sin datos sociales</td></tr>
+              <tr>
+                <td colspan="5">Sin datos sociales</td>
+              </tr>
               {% endif %}
             </table>
           </div>
@@ -413,18 +1059,30 @@
           <div class="col-12" style="grid-column: span 12;">
             <h2>Earnings calendar (gratis)</h2>
             <table>
-              <tr><th>Símbolo</th><th>Fuente</th><th>Fecha</th><th>EPS Est.</th><th>EPS Real</th><th>Revenue Est.</th><th>Revenue Real</th></tr>
+              <tr>
+                <th>Símbolo</th>
+                <th>Fuente</th>
+                <th>Fecha</th>
+                <th>EPS Est.</th>
+                <th>EPS Real</th>
+                <th>Revenue Est.</th>
+                <th>Revenue Real</th>
+              </tr>
               {% for e in signals.earnings[:12] %}
-                <tr>
-                  <td>{{ e.symbol }}</td><td>{{ e.source }}</td><td>{{ e.date or '-' }}</td>
-                  <td>{{ e.eps_estimate if e.eps_estimate is not none else '-' }}</td>
-                  <td>{{ e.eps_actual if e.eps_actual is not none else '-' }}</td>
-                  <td>{{ e.revenue_estimate if e.revenue_estimate is not none else '-' }}</td>
-                  <td>{{ e.revenue_actual if e.revenue_actual is not none else '-' }}</td>
-                </tr>
+              <tr>
+                <td>{{ e.symbol }}</td>
+                <td>{{ e.source }}</td>
+                <td>{{ e.date or '-' }}</td>
+                <td>{{ e.eps_estimate if e.eps_estimate is not none else '-' }}</td>
+                <td>{{ e.eps_actual if e.eps_actual is not none else '-' }}</td>
+                <td>{{ e.revenue_estimate if e.revenue_estimate is not none else '-' }}</td>
+                <td>{{ e.revenue_actual if e.revenue_actual is not none else '-' }}</td>
+              </tr>
               {% endfor %}
               {% if signals.earnings is not defined or signals.earnings|length == 0 %}
-                <tr><td colspan="7">Sin eventos de earnings próximos para esta watchlist en este momento.</td></tr>
+              <tr>
+                <td colspan="7">Sin eventos de earnings próximos para esta watchlist en este momento.</td>
+              </tr>
               {% endif %}
             </table>
           </div>
@@ -434,16 +1092,22 @@
       <div class="card col-12">
         <h2>Mapa de búsqueda por agente (qué API usa cada uno)</h2>
         <table>
-          <tr><th>Agente</th><th>Enfoque</th><th>Dónde está buscando</th></tr>
+          <tr>
+            <th>Agente</th>
+            <th>Enfoque</th>
+            <th>Dónde está buscando</th>
+          </tr>
           {% for a in agent_sources %}
-            <tr>
-              <td>{{ a.agent }}</td>
-              <td>{{ a.focus }}</td>
-              <td>{{ a.where }}</td>
-            </tr>
+          <tr>
+            <td>{{ a.agent }}</td>
+            <td>{{ a.focus }}</td>
+            <td>{{ a.where }}</td>
+          </tr>
           {% endfor %}
           {% if agent_sources|length == 0 %}
-            <tr><td colspan="3">Sin mapeo de agentes todavía.</td></tr>
+          <tr>
+            <td colspan="3">Sin mapeo de agentes todavía.</td>
+          </tr>
           {% endif %}
         </table>
       </div>
@@ -451,15 +1115,25 @@
     </div>
 
     <div class="grid tab-section" data-tab="crypto">
-      {% set cp = crypto_portfolio|default({'capital_initial_usd':300,'cash_usd':300,'market_value_usd':0,'equity_usd':300}) %}
+      {% set cp =
+      crypto_portfolio|default({'capital_initial_usd':300,'cash_usd':300,'market_value_usd':0,'equity_usd':300}) %}
       <div class="card col-12">
         <h2>Semáforo de realidad (edge)</h2>
         <p>
-          <span class="badge {{ 'ok' if learning_status.semaforo=='VERDE' else ('warn' if learning_status.semaforo=='AMARILLO' else 'no') }}">{{ learning_status.semaforo }}</span>
+          <span
+            class="badge {{ 'ok' if learning_status.semaforo=='VERDE' else ('warn' if learning_status.semaforo=='AMARILLO' else 'no') }}">{{
+            learning_status.semaforo }}</span>
           <span class="muted"> {{ learning_status.reason }}</span>
         </p>
         <table>
-          <tr><th>Trades 7d</th><th>Win rate</th><th>Expectancy USD/trade</th><th>Profit Factor</th><th>PnL 7d USD</th><th>Max Drawdown USD</th></tr>
+          <tr>
+            <th>Trades 7d</th>
+            <th>Win rate</th>
+            <th>Expectancy USD/trade</th>
+            <th>Profit Factor</th>
+            <th>PnL 7d USD</th>
+            <th>Max Drawdown USD</th>
+          </tr>
           <tr>
             <td>{{ learning_status.trades_7d or 0 }}</td>
             <td>{{ learning_status.win_rate or 0 }}%</td>
@@ -476,33 +1150,73 @@
         <p>
           Stream:
           {% set cs = crypto_stream|default({'stream_active':False,'latency_ms':None,'last_signal_sec':None}) %}
-          <span class="badge {{ 'ok' if cs.stream_active else 'no' }}">{{ 'ACTIVO' if cs.stream_active else 'INACTIVO' }}</span>
-          <span class="muted"> · latencia: {{ cs.latency_ms if cs.latency_ms is not none else 'N/D' }} ms · última señal: {{ cs.last_signal_sec if cs.last_signal_sec is not none else 'N/D' }} s</span>
+          <span class="badge {{ 'ok' if cs.stream_active else 'no' }}">{{ 'ACTIVO' if cs.stream_active else 'INACTIVO'
+            }}</span>
+          <span class="muted"> · latencia: {{ cs.latency_ms if cs.latency_ms is not none else 'N/D' }} ms · última
+            señal: {{ cs.last_signal_sec if cs.last_signal_sec is not none else 'N/D' }} s</span>
         </p>
         <p>
           Estado motor:
           {% if crypto_daily.paused %}
-            <span class="badge no">PAUSADO</span> <span class="muted">{{ crypto_daily.pause_reason }}</span>
+          <span class="badge no">PAUSADO</span> <span class="muted">{{ crypto_daily.pause_reason }}</span>
           {% else %}
-            <span class="badge ok">ACTIVO</span>
+          <span class="badge ok">ACTIVO</span>
           {% endif %}
-          <span class="muted"> · racha pérdidas: {{ crypto_daily.loss_streak or 0 }} · trades/hoy: {{ crypto_daily.trades or 0 }}</span>
+          <span class="muted"> · racha pérdidas: {{ crypto_daily.loss_streak or 0 }} · trades/hoy: {{
+            crypto_daily.trades or 0 }}</span>
         </p>
+
+        <div style="margin:16px 0; padding:12px; background:#1e293b; border-left:4px solid #3b82f6; border-radius:6px;">
+          {% set exposure_pct = 0.0 %}
+          {% if crypto_portfolio.capital_initial_usd|default(0)|float > 0 %}
+          {% set exposure_pct = ((crypto_portfolio.capital_initial_usd|float - crypto_portfolio.cash_usd|float) /
+          crypto_portfolio.capital_initial_usd|float * 100)|round(1) %}
+          {% endif %}
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong>🛡️ Exposición Actual (Capital en Juego)</strong>
+            <span class="badge {{ 'no' if exposure_pct > 50 else 'ok' }}">{{ exposure_pct }}% / Límite IA: 50%</span>
+          </div>
+          <div style="width:100%; height:10px; background:#0f172a; border-radius:4px; overflow:hidden;">
+            <div
+              style="width:{{ [exposure_pct, 100]|min }}%; height:100%; background:{{ '#ef4444' if exposure_pct > 50 else '#10b981' }}; transition:width 0.5s">
+            </div>
+          </div>
+        </div>
+
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <form method="post" action="/crypto/pause" style="margin:0"><button class="tab-btn" type="submit">Pausar motor</button></form>
-          <form method="post" action="/crypto/resume" style="margin:0"><button class="tab-btn" type="submit">Reanudar motor</button></form>
+          <form method="post" action="/crypto/pause" style="margin:0"><button class="tab-btn" type="submit">Pausar
+              motor</button></form>
+          <form method="post" action="/crypto/resume" style="margin:0"><button class="tab-btn" type="submit">Reanudar
+              motor</button></form>
         </div>
         <table>
-          <tr><th>Capital inicial</th><th>Gastado en operaciones activas</th><th>Cash libre</th><th>Valor activo</th><th>PnL realizado</th><th>PnL no realizado</th><th>Equity total</th><th>Equity conciliada</th><th>Activas</th><th>Cerradas</th></tr>
+          <tr>
+            <th>Capital inicial</th>
+            <th>Gastado en operaciones activas</th>
+            <th>Cash libre</th>
+            <th>Valor activo</th>
+            <th>PnL realizado</th>
+            <th>PnL no realizado</th>
+            <th>Equity total</th>
+            <th>Equity conciliada</th>
+            <th>Activas</th>
+            <th>Cerradas</th>
+          </tr>
           <tr>
             <td>{{ cp['capital_initial_usd'] }}</td>
             <td>{{ '%.2f'|format((cp['capital_initial_usd'] or 0) - (cp['cash_usd'] or 0)) }}</td>
             <td>{{ cp['cash_usd'] }}</td>
             <td>{{ cp['market_value_usd'] }}</td>
-            <td><span class="badge {{ 'ok' if (crypto_realized_usd or 0) >= 0 else 'no' }}">{{ crypto_realized_usd }}</span></td>
-            <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{ crypto_unrealized_usd_est }}</span></td>
-            <td><span class="badge {{ 'ok' if (cp['equity_usd'] or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{ cp['equity_usd'] }}</span></td>
-            <td><span class="badge {{ 'ok' if (crypto_equity_reconciled or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{ crypto_equity_reconciled }}</span></td>
+            <td><span class="badge {{ 'ok' if (crypto_realized_usd or 0) >= 0 else 'no' }}">{{ crypto_realized_usd
+                }}</span></td>
+            <td><span class="badge {{ 'ok' if (crypto_unrealized_usd_est or 0) >= 0 else 'no' }}">{{
+                crypto_unrealized_usd_est }}</span></td>
+            <td><span
+                class="badge {{ 'ok' if (cp['equity_usd'] or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{
+                cp['equity_usd'] }}</span></td>
+            <td><span
+                class="badge {{ 'ok' if (crypto_equity_reconciled or 0) >= (cp['capital_initial_usd'] or 0) else 'no' }}">{{
+                crypto_equity_reconciled }}</span></td>
             <td>{{ crypto_orders_active|length }}</td>
             <td>{{ crypto_orders_completed|length }}</td>
           </tr>
@@ -513,53 +1227,90 @@
       <div class="card col-12">
         <h2>Órdenes cripto activas (compradas)</h2>
         <table>
-          <tr><th>Ticker</th><th>Entrada</th><th>Precio actual</th><th>%</th><th>PnL USD est.</th><th>Gastado (USD)</th><th>Target</th><th>Stop</th><th>Abierta</th></tr>
+          <tr>
+            <th>Ticker</th>
+            <th>Entrada</th>
+            <th>Precio actual</th>
+            <th>%</th>
+            <th>PnL USD est.</th>
+            <th>Gastado (USD)</th>
+            <th>Target</th>
+            <th>Stop</th>
+            <th>Abierta</th>
+          </tr>
           {% for o in crypto_orders_active %}
-            <tr>
-              <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}-USD')">{{ o.ticker }}</button></td>
-              <td>{{ o.entry_price }}</td>
-              <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
-              <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td>
-              <td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td>
-              <td>{{ o.notional_usd if o.notional_usd is not none else '-' }}</td>
-              <td>{{ o.target_price }}</td>
-              <td>{{ o.stop_price }}</td>
-              <td>{{ o.opened_at }}</td>
-            </tr>
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}-USD')">{{ o.ticker
+                }}</button></td>
+            <td>{{ o.entry_price }}</td>
+            <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
+            <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move
+                }}%</span>{% else %}-{% endif %}</td>
+            <td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{
+                o.pnl_usd_est }}</span>{% else %}-{% endif %}</td>
+            <td>{{ o.notional_usd if o.notional_usd is not none else '-' }}</td>
+            <td>{{ o.target_price }}</td>
+            <td>{{ o.stop_price }}</td>
+            <td>{{ o.opened_at }}</td>
+          </tr>
           {% endfor %}
-          {% if crypto_orders_active|length == 0 %}<tr><td colspan="9">No hay compras activas ahora mismo.</td></tr>{% endif %}
+          {% if crypto_orders_active|length == 0 %}<tr>
+            <td colspan="9">No hay compras activas ahora mismo.</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Cripto Scout (simulado) — lenguaje natural</h2>
-        <p class="muted">Fuente: {{ crypto_signals.source or 'N/D' }} · actualización: {{ crypto_signals.generated_at or 'N/D' }}{% if crypto_signals.freshness_min is not none %} (hace {{ crypto_signals.freshness_min }} min){% endif %}</p>
+        <p class="muted">Fuente: {{ crypto_signals.source or 'N/D' }} · actualización: {{ crypto_signals.generated_at or
+          'N/D' }}{% if crypto_signals.freshness_min is not none %} (hace {{ crypto_signals.freshness_min }} min){%
+          endif %}</p>
         <table>
-          <tr><th>Activo</th><th>Precio USD</th><th>24h</th><th>7d</th><th>Score</th><th>Gem score</th><th>Espías</th><th>Rugcheck</th><th>Estado</th><th>Decisión</th><th>Ejecución</th><th>Lectura en cristiano</th></tr>
+          <tr>
+            <th>Activo</th>
+            <th>Precio USD</th>
+            <th>24h</th>
+            <th>7d</th>
+            <th>Score</th>
+            <th>Gem score</th>
+            <th>Espías</th>
+            <th>Rugcheck</th>
+            <th>Estado</th>
+            <th>Decisión</th>
+            <th>Ejecución</th>
+            <th>Lectura en cristiano</th>
+          </tr>
           {% for c in crypto_signals.top_opportunities[:10] if crypto_signals.top_opportunities is defined %}
-            <tr>
-              <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ c.ticker }}-USD')">{{ c.ticker }}</button> · {{ c.name }}</td>
-              <td>{{ c.price_usd }}</td>
-              <td><span class="badge {{ 'ok' if c.chg_24h_pct >= 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
-              <td><span class="badge {{ 'ok' if c.chg_7d_pct >= 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
-              <td>{{ c.score }}</td>
-              <td><span class="badge {{ 'ok' if (c.gem_score or 0) >= 75 else ('warn' if (c.gem_score or 0) >= 65 else 'no') }}">{{ c.gem_score or 0 }}</span></td>
-              <td><span class="badge {{ 'ok' if (c.spy_confluence or 0) >= 3 else 'no' }}">{{ c.spy_confluence or 0 }}</span></td>
-              <td><span class="badge {{ 'no' if c.rug_block else 'ok' }}">{{ 'BLOQUEA' if c.rug_block else 'OK' }}</span></td>
-              <td>{{ c.state }}</td>
-              <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else 'no' }}">{{ c.decision_final }}</span></td>
-              <td>
-                {% if c.ticker in active_crypto_tickers %}
-                  <span class="badge ok">COMPRADA</span>
-                {% else %}
-                  <span class="badge no">NO COMPRADA</span>
-                {% endif %}
-              </td>
-              <td>{{ c.argumento_en_contra }}</td>
-            </tr>
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ c.ticker }}-USD')">{{ c.ticker
+                }}</button> · {{ c.name }}</td>
+            <td>{{ c.price_usd }}</td>
+            <td><span class="badge {{ 'ok' if c.chg_24h_pct >= 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
+            <td><span class="badge {{ 'ok' if c.chg_7d_pct >= 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
+            <td>{{ c.score }}</td>
+            <td><span
+                class="badge {{ 'ok' if (c.gem_score or 0) >= 75 else ('warn' if (c.gem_score or 0) >= 65 else 'no') }}">{{
+                c.gem_score or 0 }}</span></td>
+            <td><span class="badge {{ 'ok' if (c.spy_confluence or 0) >= 3 else 'no' }}">{{ c.spy_confluence or 0
+                }}</span></td>
+            <td><span class="badge {{ 'no' if c.rug_block else 'ok' }}">{{ 'BLOQUEA' if c.rug_block else 'OK' }}</span>
+            </td>
+            <td>{{ c.state }}</td>
+            <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else 'no' }}">{{ c.decision_final }}</span></td>
+            <td>
+              {% if c.ticker in active_crypto_tickers %}
+              <span class="badge ok">COMPRADA</span>
+              {% else %}
+              <span class="badge no">NO COMPRADA</span>
+              {% endif %}
+            </td>
+            <td>{{ c.argumento_en_contra }}</td>
+          </tr>
           {% endfor %}
           {% if crypto_signals.top_opportunities is not defined or crypto_signals.top_opportunities|length == 0 %}
-            <tr><td colspan="12">Sin datos cripto todavía (ejecuta ingest cripto).</td></tr>
+          <tr>
+            <td colspan="12">Sin datos cripto todavía (ejecuta ingest cripto).</td>
+          </tr>
           {% endif %}
         </table>
       </div>
@@ -568,7 +1319,8 @@
     <div class="grid tab-section" data-tab="oficina">
       <div class="card col-12">
         <h2>🏢 Oficina viva de agentes</h2>
-        <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. En móvil se muestra una vista simplificada (sin solapes) para que se lea mejor.</p>
+        <p class="muted">Sí, pueden reunirse varios a la vez en la sala cónclave. En móvil se muestra una vista
+          simplificada (sin solapes) para que se lea mejor.</p>
         <div class="office-legend">
           <span class="legend-item">🔵 En despacho</span>
           <span class="legend-item">🟠 En tránsito</span>
@@ -668,38 +1420,110 @@
     <div class="grid tab-section" data-tab="cerebro">
       <div class="card col-12">
         <h2>Warehouse Historical Quant (Precios 15min)</h2>
-        <p class="muted">Datos capturados crudos directamente desde Binance para tu motor matemático sin pasar por la nube. </p>
+        <p class="muted">Datos capturados crudos directamente desde Binance para tu motor matemático sin pasar por la
+          nube. </p>
         <div style="max-height: 400px; overflow-y: auto;">
-          <table>
-            <tr><th>Timestamp (UTC)</th><th>Activo</th><th>Precio (USD)</th></tr>
-            {% for c in quant_data %}
-            <tr><td>{{ c.timestamp_utc }}</td><td>{{ c.asset }}</td><td>{{ c.price }}</td></tr>
-            {% endfor %}
-            {% if quant_data|length == 0 %}
-            <tr><td colspan="3">Aún no hay datos quant coleccionados.</td></tr>
-            {% endif %}
+          <table id="quant-table">
+            <thead>
+              <tr>
+                <th>Activo</th>
+                <th>Último Precio (USD)</th>
+                <th>Tendencia Relativa (Sparkline)</th>
+                <th>Actualizado (UTC)</th>
+              </tr>
+            </thead>
+            <tbody id="quant-table-body">
+              <tr>
+                <td colspan="4">Cargando gráficos quant...</td>
+              </tr>
+            </tbody>
           </table>
+          <script>
+            document.addEventListener("DOMContentLoaded", function () {
+              const quantRaw = {{ quant_data | tojson | safe
+            }};
+            if (!quantRaw || quantRaw.length === 0) {
+              document.getElementById("quant-table-body").innerHTML = "<tr><td colspan='4'>Aún no hay datos quant coleccionados.</td></tr>";
+              return;
+            }
+            const byAsset = {};
+            // quantRaw viene ordenado del más nuevo al más viejo
+            quantRaw.forEach(row => {
+              if (!byAsset[row.asset]) byAsset[row.asset] = [];
+              byAsset[row.asset].unshift({ price: parseFloat(row.price), time: row.timestamp_utc }); // reverse to chron order
+            });
+
+            let html = "";
+            let svgIndex = 0;
+            for (const asset in byAsset) {
+              const data = byAsset[asset];
+              const last = data[data.length - 1];
+              const prices = data.map(d => d.price);
+              const min = Math.min(...prices);
+              const max = Math.max(...prices);
+              const isUp = prices[prices.length - 1] >= prices[0];
+              const color = isUp ? "#10b981" : "#ef4444";
+
+              // Generar path SVG simple
+              const w = 120;
+              const h = 30;
+              let pathD = "";
+              if (prices.length > 1 && max > min) {
+                const stepX = w / (prices.length - 1);
+                pathD = prices.map((p, i) => {
+                  const dx = i * stepX;
+                  const dy = h - ((p - min) / (max - min) * h);
+                  return (i === 0 ? "M" : "L") + dx + " " + dy;
+                }).join(" ");
+              } else if (prices.length > 0) {
+                pathD = "M0 " + (h / 2) + " L" + w + " " + (h / 2);
+              }
+
+              html += `<tr>
+                  <td><strong>${asset}</strong></td>
+                  <td>${last.price}</td>
+                  <td>
+                    <svg width="${w}" height="${h}" style="overflow:visible; display:block; margin:auto;">
+                       <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" />
+                       <circle cx="${w}" cy="${h - ((prices[prices.length - 1] - min) / (max - min || 1) * h)}" r="3" fill="${color}" />
+                    </svg>
+                  </td>
+                  <td class="muted">${last.time}</td>
+                </tr>`;
+              svgIndex++;
+            }
+            document.getElementById("quant-table-body").innerHTML = html;
+            });
+          </script>
         </div>
       </div>
-      
+
       <div class="card col-12">
         <h2>RAG Memory Journal (Tesis de Inversión)</h2>
         <p class="muted">Motor Vectorial local. Aquí el bot almacena sus tesis y contexto para el futuro.</p>
         <div style="max-height: 400px; overflow-y: auto;">
-            <table>
-              <tr><th>Fecha</th><th>Asset</th><th>Action</th><th>Tesis guardada</th></tr>
-              {% for j in rag_journal %}
-              <tr>
-                <td>{{ j.date }}</td>
-                <td>{{ j.asset }}</td>
-                <td><span class="badge {{ 'ok' if j.action=='BUY' else ('no' if j.action=='SELL' else 'warn') }}">{{ j.action }}</span></td>
-                <td style="white-space: normal;">{{ j.text }}</td>
-              </tr>
-              {% endfor %}
-              {% if rag_journal|length == 0 %}
-              <tr><td colspan="4">Aún no hay memorias vectorizadas.</td></tr>
-              {% endif %}
-            </table>
+          <table>
+            <tr>
+              <th>Fecha</th>
+              <th>Asset</th>
+              <th>Action</th>
+              <th>Tesis guardada</th>
+            </tr>
+            {% for j in rag_journal %}
+            <tr>
+              <td>{{ j.date }}</td>
+              <td>{{ j.asset }}</td>
+              <td><span class="badge {{ 'ok' if j.action=='BUY' else ('no' if j.action=='SELL' else 'warn') }}">{{
+                  j.action }}</span></td>
+              <td style="white-space: normal;">{{ j.text }}</td>
+            </tr>
+            {% endfor %}
+            {% if rag_journal|length == 0 %}
+            <tr>
+              <td colspan="4">Aún no hay memorias vectorizadas.</td>
+            </tr>
+            {% endif %}
+          </table>
         </div>
       </div>
     </div>
@@ -707,50 +1531,84 @@
     <div class="grid tab-section" data-tab="agentes">
       <div class="card col-12">
         <h2>Qué hacen los agentes (explicado simple)</h2>
-        <p class="muted">Cada agente tiene un trabajo: uno mira macro, otro noticias, otro técnico y otro riesgo. Alpha Scout junta todo y decide estado WATCH/READY/TRIGGERED.</p>
+        <p class="muted">Cada agente tiene un trabajo: uno mira macro, otro noticias, otro técnico y otro riesgo. Alpha
+          Scout junta todo y decide estado WATCH/READY/TRIGGERED.</p>
         <table>
-          <tr><th>Agente</th><th>Rol</th><th>Modelo</th><th>Motivo</th></tr>
+          <tr>
+            <th>Agente</th>
+            <th>Rol</th>
+            <th>Modelo</th>
+            <th>Motivo</th>
+          </tr>
           {% for a in agents_runtime %}
-            <tr><td>{{ a.id }}</td><td>{{ a.role }}</td><td>{{ a.model }}</td><td>{{ a.why }}</td></tr>
+          <tr>
+            <td>{{ a.id }}</td>
+            <td>{{ a.role }}</td>
+            <td>{{ a.model }}</td>
+            <td>{{ a.why }}</td>
+          </tr>
           {% endfor %}
-          {% if agents_runtime|length == 0 %}<tr><td colspan="4">Sin configuración de agentes</td></tr>{% endif %}
+          {% if agents_runtime|length == 0 %}<tr>
+            <td colspan="4">Sin configuración de agentes</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Estado de agentes (claro y simple)</h2>
         <table>
-          <tr><th>Agente</th><th>Modelo</th><th>Estado</th><th>Tiempo de respuesta</th><th>Lectura humana</th></tr>
+          <tr>
+            <th>Agente</th>
+            <th>Modelo</th>
+            <th>Estado</th>
+            <th>Tiempo de respuesta</th>
+            <th>Lectura humana</th>
+          </tr>
           {% for h in agents_health %}
-            {% set ok = h.ok %}
-            {% set estado = 'operativo' if ok else 'revisar' %}
-            {% set badge = 'ok' if ok else 'no' %}
-            {% set lat = h.latency_s if h.latency_s is not none else '-' %}
-            {% if h.model == 'deterministic' %}
-              {% set lectura = 'Funciona por reglas fijas (sin IA de texto).' %}
-            {% else %}
-              {% set lectura = 'IA local respondiendo correctamente.' if ok else 'La IA local no respondió bien en la última prueba.' %}
-            {% endif %}
-            <tr>
-              <td>{{ h.agent }}</td>
-              <td>{{ h.model }}</td>
-              <td><span class="badge {{ badge }}">{{ estado }}</span></td>
-              <td>{{ lat }} s</td>
-              <td>{{ lectura }}</td>
-            </tr>
+          {% set ok = h.ok %}
+          {% set estado = 'operativo' if ok else 'revisar' %}
+          {% set badge = 'ok' if ok else 'no' %}
+          {% set lat = h.latency_s if h.latency_s is not none else '-' %}
+          {% if h.model == 'deterministic' %}
+          {% set lectura = 'Funciona por reglas fijas (sin IA de texto).' %}
+          {% else %}
+          {% set lectura = 'IA local respondiendo correctamente.' if ok else 'La IA local no respondió bien en la última
+          prueba.' %}
+          {% endif %}
+          <tr>
+            <td>{{ h.agent }}</td>
+            <td>{{ h.model }}</td>
+            <td><span class="badge {{ badge }}">{{ estado }}</span></td>
+            <td>{{ lat }} s</td>
+            <td>{{ lectura }}</td>
+          </tr>
           {% endfor %}
-          {% if agents_health|length == 0 %}<tr><td colspan="5">Sin datos de salud todavía</td></tr>{% endif %}
+          {% if agents_health|length == 0 %}<tr>
+            <td colspan="5">Sin datos de salud todavía</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Tokens por agente/proceso <span class="muted" style="font-size:12px">(estimado local)</span></h2>
         <table>
-          <tr><th>Actor</th><th>Tokens in</th><th>Tokens out</th><th>Total</th></tr>
+          <tr>
+            <th>Actor</th>
+            <th>Tokens in</th>
+            <th>Tokens out</th>
+            <th>Total</th>
+          </tr>
           {% for t in token_by_actor %}
-            <tr><td>{{ t.actor }}</td><td>{{ t.tin or 0 }}</td><td>{{ t.tout or 0 }}</td><td>{{ t.total or 0 }}</td></tr>
+          <tr>
+            <td>{{ t.actor }}</td>
+            <td>{{ t.tin or 0 }}</td>
+            <td>{{ t.tout or 0 }}</td>
+            <td>{{ t.total or 0 }}</td>
+          </tr>
           {% endfor %}
-          {% if token_by_actor|length == 0 %}<tr><td colspan="4">Sin datos de tokens por agente todavía</td></tr>{% endif %}
+          {% if token_by_actor|length == 0 %}<tr>
+            <td colspan="4">Sin datos de tokens por agente todavía</td>
+          </tr>{% endif %}
         </table>
       </div>
 
@@ -758,24 +1616,42 @@
         <h2>Matriz de decisión por agente (por ticker)</h2>
         <p class="muted">Así ves qué bloque ha pasado cada activo antes de decidir WATCH/READY/TRIGGERED.</p>
         <table>
-          <tr><th>Ticker</th><th>Macro</th><th>Estructural</th><th>Capital</th><th>Técnico</th><th>Convergencia</th><th>Estado final</th></tr>
+          <tr>
+            <th>Ticker</th>
+            <th>Macro</th>
+            <th>Estructural</th>
+            <th>Capital</th>
+            <th>Técnico</th>
+            <th>Convergencia</th>
+            <th>Estado final</th>
+          </tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:8] %}
-            {% set macro_ok = (o.score_macro_adj if o.score_macro_adj is not none else 0) >= 0 %}
-            {% set structural_ok = ((o.fundamental_inflection_score or 0) + (o.catalyst_score or 0) + (o.spinoff_score or 0)) >= 10 %}
-            {% set capital_ok = ((o.insider_score or 0) + (o.options_flow_score or 0)) > 0 or ((o.score_social if o.score_social is not none else -999) >= 50) %}
-            {% set technical_ok = (o.score_tech or 0) >= 55 %}
-            <tr>
-              <td>{{ o.ticker }}</td>
-              <td><span class="badge {{ 'ok' if macro_ok else 'no' }}">{{ 'OK' if macro_ok else 'NO' }}</span></td>
-              <td><span class="badge {{ 'ok' if structural_ok else 'no' }}">{{ 'OK' if structural_ok else 'NO' }}</span></td>
-              <td><span class="badge {{ 'ok' if capital_ok else 'no' }}">{{ 'OK' if capital_ok else 'NO' }}</span></td>
-              <td><span class="badge {{ 'ok' if technical_ok else 'no' }}">{{ 'OK' if technical_ok else 'NO' }}</span></td>
-              <td><span class="badge {{ 'ok' if (o.convergence_count or 0)>=3 else ('warn' if (o.convergence_count or 0)==2 else 'no') }}">{{ o.convergence_count if o.convergence_count is not none else 0 }}/3</span></td>
-              <td><span class="badge {{ 'ok' if (o.state or 'WATCH')=='TRIGGERED' else ('warn' if (o.state or 'WATCH')=='READY' else 'no') }}">{{ o.state or 'WATCH' }}</span></td>
-            </tr>
+          {% set macro_ok = (o.score_macro_adj if o.score_macro_adj is not none else 0) >= 0 %}
+          {% set structural_ok = ((o.fundamental_inflection_score or 0) + (o.catalyst_score or 0) + (o.spinoff_score or
+          0)) >= 10 %}
+          {% set capital_ok = ((o.insider_score or 0) + (o.options_flow_score or 0)) > 0 or ((o.score_social if
+          o.score_social is not none else -999) >= 50) %}
+          {% set technical_ok = (o.score_tech or 0) >= 55 %}
+          <tr>
+            <td>{{ o.ticker }}</td>
+            <td><span class="badge {{ 'ok' if macro_ok else 'no' }}">{{ 'OK' if macro_ok else 'NO' }}</span></td>
+            <td><span class="badge {{ 'ok' if structural_ok else 'no' }}">{{ 'OK' if structural_ok else 'NO' }}</span>
+            </td>
+            <td><span class="badge {{ 'ok' if capital_ok else 'no' }}">{{ 'OK' if capital_ok else 'NO' }}</span></td>
+            <td><span class="badge {{ 'ok' if technical_ok else 'no' }}">{{ 'OK' if technical_ok else 'NO' }}</span>
+            </td>
+            <td><span
+                class="badge {{ 'ok' if (o.convergence_count or 0)>=3 else ('warn' if (o.convergence_count or 0)==2 else 'no') }}">{{
+                o.convergence_count if o.convergence_count is not none else 0 }}/3</span></td>
+            <td><span
+                class="badge {{ 'ok' if (o.state or 'WATCH')=='TRIGGERED' else ('warn' if (o.state or 'WATCH')=='READY' else 'no') }}">{{
+                o.state or 'WATCH' }}</span></td>
+          </tr>
           {% endfor %}
-          {% if top_ops|length == 0 %}<tr><td colspan="7">Sin datos de oportunidades</td></tr>{% endif %}
+          {% if top_ops|length == 0 %}<tr>
+            <td colspan="7">Sin datos de oportunidades</td>
+          </tr>{% endif %}
         </table>
       </div>
 
@@ -783,7 +1659,7 @@
         <h2>Qué está haciendo cada agente ahora (en directo)</h2>
         <ul style="margin:0;padding-left:18px;line-height:1.8">
           {% for a in agent_live %}
-            <li>{{ a.text }}</li>
+          <li>{{ a.text }}</li>
           {% endfor %}
           {% if agent_live|length == 0 %}<li>Sin estado en directo todavía.</li>{% endif %}
         </ul>
@@ -792,11 +1668,25 @@
       <div class="card col-12">
         <h2>Actividad automática reciente (solo lectura)</h2>
         <table>
-          <tr><th>Hora</th><th>Top vistos</th><th>Tareas</th><th>Órdenes nuevas</th><th>Órdenes cerradas</th></tr>
+          <tr>
+            <th>Hora</th>
+            <th>Top vistos</th>
+            <th>Tareas</th>
+            <th>Órdenes nuevas</th>
+            <th>Órdenes cerradas</th>
+          </tr>
           {% for a in autopilot_log[:8] %}
-            <tr><td>{{ a.ts }}</td><td>{{ a.top_count }}</td><td>{{ a.created_tasks }}</td><td>{{ a.created_orders or 0 }}</td><td>{{ a.closed_orders or 0 }}</td></tr>
+          <tr>
+            <td>{{ a.ts }}</td>
+            <td>{{ a.top_count }}</td>
+            <td>{{ a.created_tasks }}</td>
+            <td>{{ a.created_orders or 0 }}</td>
+            <td>{{ a.closed_orders or 0 }}</td>
+          </tr>
           {% endfor %}
-          {% if autopilot_log|length == 0 %}<tr><td colspan="5">Sin actividad automática todavía</td></tr>{% endif %}
+          {% if autopilot_log|length == 0 %}<tr>
+            <td colspan="5">Sin actividad automática todavía</td>
+          </tr>{% endif %}
         </table>
       </div>
 
@@ -806,36 +1696,47 @@
       <div class="card col-12">
         <h2>Top oportunidades (lectura simple)</h2>
         <table>
-          <tr><th>Ticker</th><th>Estado</th><th>Confianza</th><th>Qué significa</th><th>Acción sugerida</th></tr>
+          <tr>
+            <th>Ticker</th>
+            <th>Estado</th>
+            <th>Confianza</th>
+            <th>Qué significa</th>
+            <th>Acción sugerida</th>
+          </tr>
           {% set top_ops = signals.top_opportunities if signals.top_opportunities is defined else [] %}
           {% for o in top_ops[:5] %}
-            {% set stx = o.state or 'WATCH' %}
-            {% set st_es = 'Vigilar' if stx=='WATCH' else ('Casi lista' if stx=='READY' else ('Lista para ejecutar' if stx=='TRIGGERED' else stx)) %}
-            {% set conf = o.score_final if o.score_final is not none else o.score %}
-            {% if stx == 'TRIGGERED' %}
-              {% set accion = 'Preparar ejecución simulada inmediata' %}
-            {% elif stx == 'READY' %}
-              {% set accion = 'Vigilar volumen y confirmación para entrar' %}
-            {% else %}
-              {% set accion = 'Esperar confirmación, no entrar aún' %}
-            {% endif %}
-            <tr>
-              <td><strong>{{ o.ticker }}</strong></td>
-              <td><span class="badge {{ 'ok' if stx=='TRIGGERED' else ('warn' if stx=='READY' else 'no') }}">{{ '🟢 ' if stx=='TRIGGERED' else ('🟡 ' if stx=='READY' else '🔴 ') }}{{ st_es }}</span></td>
-              <td>{{ conf }}/100</td>
-              <td>
-                {% if o.earnings_label and o.earnings_label != 'No Data' %}{{ o.earnings_label }} · {% endif %}
-                {% if o.rel_volume and o.rel_volume >= 1.2 %}volumen fuerte{% else %}volumen normal{% endif %}
-                · {% if o.breakout_20 %}rompiendo máximos recientes{% else %}sin ruptura clara{% endif %}
-              </td>
-              <td>{{ accion }}</td>
-            </tr>
+          {% set stx = o.state or 'WATCH' %}
+          {% set st_es = 'Vigilar' if stx=='WATCH' else ('Casi lista' if stx=='READY' else ('Lista para ejecutar' if
+          stx=='TRIGGERED' else stx)) %}
+          {% set conf = o.score_final if o.score_final is not none else o.score %}
+          {% if stx == 'TRIGGERED' %}
+          {% set accion = 'Preparar ejecución simulada inmediata' %}
+          {% elif stx == 'READY' %}
+          {% set accion = 'Vigilar volumen y confirmación para entrar' %}
+          {% else %}
+          {% set accion = 'Esperar confirmación, no entrar aún' %}
+          {% endif %}
+          <tr>
+            <td><strong>{{ o.ticker }}</strong></td>
+            <td><span class="badge {{ 'ok' if stx=='TRIGGERED' else ('warn' if stx=='READY' else 'no') }}">{{ '🟢 ' if
+                stx=='TRIGGERED' else ('🟡 ' if stx=='READY' else '🔴 ') }}{{ st_es }}</span></td>
+            <td>{{ conf }}/100</td>
+            <td>
+              {% if o.earnings_label and o.earnings_label != 'No Data' %}{{ o.earnings_label }} · {% endif %}
+              {% if o.rel_volume and o.rel_volume >= 1.2 %}volumen fuerte{% else %}volumen normal{% endif %}
+              · {% if o.breakout_20 %}rompiendo máximos recientes{% else %}sin ruptura clara{% endif %}
+            </td>
+            <td>{{ accion }}</td>
+          </tr>
           {% endfor %}
           {% if top_ops|length == 0 %}
-            <tr><td colspan="5">Sin oportunidades calculadas todavía</td></tr>
+          <tr>
+            <td colspan="5">Sin oportunidades calculadas todavía</td>
+          </tr>
           {% endif %}
         </table>
-        <div class="muted" style="margin-top:8px">Tip: en modo experto puedes ver todos los indicadores técnicos detallados.</div>
+        <div class="muted" style="margin-top:8px">Tip: en modo experto puedes ver todos los indicadores técnicos
+          detallados.</div>
       </div>
 
     </div>
@@ -847,116 +1748,192 @@
 
         <h2>Estado de APIs/Fuentes</h2>
         <table>
-          <tr><th>Fuente</th><th>Estado</th><th>Nota</th></tr>
-          <tr><td>FINNHUB</td><td>{{ api_status['FINNHUB'] }}</td><td>Precio/quote + news mercado USA</td></tr>
-          <tr><td>FMP</td><td>{{ api_status['FMP'] }}</td><td>Fundamentales + respaldo de earnings</td></tr>
-          <tr><td>ALPHA_VANTAGE</td><td>{{ api_status['ALPHA_VANTAGE'] }}</td><td>Backup de precios/fundamental</td></tr>
-          <tr><td>FRED</td><td>{{ api_status['FRED'] }}</td><td>Macro USA (tipos, inflación, liquidez)</td></tr>
-          <tr><td>NEWSAPI</td><td>{{ api_status['NEWSAPI'] }}</td><td>Catalizadores de prensa</td></tr>
-          <tr><td>COINGECKO</td><td>{{ api_status['COINGECKO'] }}</td><td>Cobertura cripto alternativa</td></tr>
-          <tr><td>OpenInsider</td><td>{{ api_status['OPENINSIDER'] }}</td><td>Insider buying público (web)</td></tr>
-          <tr><td>Yahoo Options</td><td>{{ api_status['YAHOO_OPTIONS'] }}</td><td>Open interest calls/puts base</td></tr>
-          <tr><td>Finviz</td><td>{{ api_status['FINVIZ'] }}</td><td>Titulares por ticker (catalizadores)</td></tr>
+          <tr>
+            <th>Fuente</th>
+            <th>Estado</th>
+            <th>Nota</th>
+          </tr>
+          <tr>
+            <td>FINNHUB</td>
+            <td>{{ api_status['FINNHUB'] }}</td>
+            <td>Precio/quote + news mercado USA</td>
+          </tr>
+          <tr>
+            <td>FMP</td>
+            <td>{{ api_status['FMP'] }}</td>
+            <td>Fundamentales + respaldo de earnings</td>
+          </tr>
+          <tr>
+            <td>ALPHA_VANTAGE</td>
+            <td>{{ api_status['ALPHA_VANTAGE'] }}</td>
+            <td>Backup de precios/fundamental</td>
+          </tr>
+          <tr>
+            <td>FRED</td>
+            <td>{{ api_status['FRED'] }}</td>
+            <td>Macro USA (tipos, inflación, liquidez)</td>
+          </tr>
+          <tr>
+            <td>NEWSAPI</td>
+            <td>{{ api_status['NEWSAPI'] }}</td>
+            <td>Catalizadores de prensa</td>
+          </tr>
+          <tr>
+            <td>COINGECKO</td>
+            <td>{{ api_status['COINGECKO'] }}</td>
+            <td>Cobertura cripto alternativa</td>
+          </tr>
+          <tr>
+            <td>OpenInsider</td>
+            <td>{{ api_status['OPENINSIDER'] }}</td>
+            <td>Insider buying público (web)</td>
+          </tr>
+          <tr>
+            <td>Yahoo Options</td>
+            <td>{{ api_status['YAHOO_OPTIONS'] }}</td>
+            <td>Open interest calls/puts base</td>
+          </tr>
+          <tr>
+            <td>Finviz</td>
+            <td>{{ api_status['FINVIZ'] }}</td>
+            <td>Titulares por ticker (catalizadores)</td>
+          </tr>
         </table>
-        <div class="muted" style="margin-top:8px">Si quieres más precisión pro, luego pedimos APIs premium de opciones e insiders.</div>
+        <div class="muted" style="margin-top:8px">Si quieres más precisión pro, luego pedimos APIs premium de opciones e
+          insiders.</div>
 
         <h2>Override manual (solo si quieres forzar una tarea)</h2>
-        <form method="post" action="/tasks/create" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
+        <form method="post" action="/tasks/create"
+          style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 120px;gap:8px;align-items:end">
           <div>
             <label class="muted">Título</label>
-            <input name="title" required style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" placeholder="Ej: Vigilar ruptura de NVDA con volumen" />
+            <input name="title" required
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff"
+              placeholder="Ej: Vigilar ruptura de NVDA con volumen" />
           </div>
           <div>
             <label class="muted">Agente</label>
-            <input name="assigned_to" value="alpha-scout" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+            <input name="assigned_to" value="alpha-scout"
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           </div>
           <div>
             <label class="muted">Convicción</label>
-            <input name="conviction" type="number" min="1" max="5" value="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
+            <input name="conviction" type="number" min="1" max="5" value="3"
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff" />
           </div>
           <div>
             <label class="muted">Prioridad</label>
-            <select name="priority" style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff">
+            <select name="priority"
+              style="width:100%;padding:10px;border-radius:10px;border:1px solid #2a3a5b;background:#0d1423;color:#eaf0ff">
               <option value="alta">alta</option>
               <option value="media" selected>media</option>
               <option value="baja">baja</option>
             </select>
           </div>
-          <button type="submit" style="padding:10px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer">Añadir</button>
+          <button type="submit"
+            style="padding:10px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer">Añadir</button>
         </form>
       </div>
 
       <div class="card col-12">
         <h2>Tareas de agentes (últimas)</h2>
         <table>
-          <tr><th>ID</th><th>Estado</th><th>Prioridad</th><th>Asignó</th><th>Agente</th><th>Título</th><th>Convicción</th><th>Cuándo la hará</th><th>Actualizado</th><th>Acciones</th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Estado</th>
+            <th>Prioridad</th>
+            <th>Asignó</th>
+            <th>Agente</th>
+            <th>Título</th>
+            <th>Convicción</th>
+            <th>Cuándo la hará</th>
+            <th>Actualizado</th>
+            <th>Acciones</th>
+          </tr>
           {% for r in recent_tasks %}
-            {% set conv = '-' %}
-            {% if r.details and '[conviction:' in r.details %}
-              {% set conv = r.details.split('[conviction:')[1].split(']')[0] %}
-            {% endif %}
-            <tr>
-              <td>{{ r.task_id }}</td>
-              {% set st = r.status %}
-              {% if st == 'pending' %}{% set st_es = 'pendiente' %}
-              {% elif st == 'running' %}{% set st_es = 'en curso' %}
-              {% elif st == 'done' %}{% set st_es = 'hecha' %}
-              {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
-              {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
-              {% else %}{% set st_es = st %}{% endif %}
-              <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
-              <td>{{ r.priority or 'media' }}</td>
-              <td>{{ r.assigned_by }}</td>
-              <td>{{ r.assigned_to }}</td>
-              <td>{{ r.title }}</td>
-              <td>{{ conv }}</td>
-              <td>
-                {% if r.next_check_at %}
-                  próxima revisión: {{ r.next_check_at }}
-                {% elif r.due_at %}
-                  antes de: {{ r.due_at }}
-                {% elif r.start_at %}
-                  inicio previsto: {{ r.start_at }}
+          {% set conv = '-' %}
+          {% if r.details and '[conviction:' in r.details %}
+          {% set conv = r.details.split('[conviction:')[1].split(']')[0] %}
+          {% endif %}
+          <tr>
+            <td>{{ r.task_id }}</td>
+            {% set st = r.status %}
+            {% if st == 'pending' %}{% set st_es = 'pendiente' %}
+            {% elif st == 'running' %}{% set st_es = 'en curso' %}
+            {% elif st == 'done' %}{% set st_es = 'hecha' %}
+            {% elif st == 'blocked' %}{% set st_es = 'bloqueada' %}
+            {% elif st == 'cancelled' %}{% set st_es = 'cancelada' %}
+            {% else %}{% set st_es = st %}{% endif %}
+            <td><span class="badge {{ r.status }}">{{ st_es }}</span></td>
+            <td>{{ r.priority or 'media' }}</td>
+            <td>{{ r.assigned_by }}</td>
+            <td>{{ r.assigned_to }}</td>
+            <td>{{ r.title }}</td>
+            <td>{{ conv }}</td>
+            <td>
+              {% if r.next_check_at %}
+              próxima revisión: {{ r.next_check_at }}
+              {% elif r.due_at %}
+              antes de: {{ r.due_at }}
+              {% elif r.start_at %}
+              inicio previsto: {{ r.start_at }}
+              {% else %}
+              en el próximo ciclo automático
+              {% endif %}
+            </td>
+            <td>{{ r.updated_at }}</td>
+            <td>
+              <form method="post" action="/tasks/status" style="display:flex;gap:6px;align-items:center">
+                <input type="hidden" name="task_id" value="{{ r.task_id }}" />
+                {% if r.status == 'pending' %}
+                <button name="status" value="running"
+                  style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Pasar
+                  a en curso</button>
+                {% elif r.status == 'running' %}
+                <button name="status" value="done"
+                  style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Marcar
+                  hecha</button>
+                {% elif r.status == 'blocked' %}
+                <button name="status" value="running"
+                  style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Reanudar
+                  (en curso)</button>
                 {% else %}
-                  en el próximo ciclo automático
+                <span class="muted">Sin acciones</span>
                 {% endif %}
-              </td>
-              <td>{{ r.updated_at }}</td>
-              <td>
-                <form method="post" action="/tasks/status" style="display:flex;gap:6px;align-items:center">
-                  <input type="hidden" name="task_id" value="{{ r.task_id }}" />
-                  {% if r.status == 'pending' %}
-                    <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Pasar a en curso</button>
-                  {% elif r.status == 'running' %}
-                    <button name="status" value="done" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#133a22;color:#8ee6b0;cursor:pointer">Marcar hecha</button>
-                  {% elif r.status == 'blocked' %}
-                    <button name="status" value="running" style="padding:4px 8px;border-radius:8px;border:1px solid #2a3a5b;background:#0c3147;color:#8ad4ff;cursor:pointer">Reanudar (en curso)</button>
-                  {% else %}
-                    <span class="muted">Sin acciones</span>
-                  {% endif %}
-                </form>
-              </td>
-            </tr>
+              </form>
+            </td>
+          </tr>
           {% endfor %}
-          {% if recent_tasks|length == 0 %}<tr><td colspan="10">Sin datos</td></tr>{% endif %}
+          {% if recent_tasks|length == 0 %}<tr>
+            <td colspan="10">Sin datos</td>
+          </tr>{% endif %}
         </table>
       </div>
 
       <div class="card col-12">
         <h2>Cron registradas</h2>
         <table>
-          <tr><th>Nombre</th><th>Cron</th><th>Activa</th><th>Owner</th><th>Task Ref</th><th>Actualizado</th></tr>
+          <tr>
+            <th>Nombre</th>
+            <th>Cron</th>
+            <th>Activa</th>
+            <th>Owner</th>
+            <th>Task Ref</th>
+            <th>Actualizado</th>
+          </tr>
           {% for r in cron_rows %}
-            <tr>
-              <td>{{ r.name }}</td>
-              <td>{{ r.cron_expr }}</td>
-              <td>{{ 'sí' if r.active == 1 else 'no' }}</td>
-              <td>{{ r.owner_user_id }}</td>
-              <td>{{ r.task_ref }}</td>
-              <td>{{ r.updated_at }}</td>
-            </tr>
+          <tr>
+            <td>{{ r.name }}</td>
+            <td>{{ r.cron_expr }}</td>
+            <td>{{ 'sí' if r.active == 1 else 'no' }}</td>
+            <td>{{ r.owner_user_id }}</td>
+            <td>{{ r.task_ref }}</td>
+            <td>{{ r.updated_at }}</td>
+          </tr>
           {% endfor %}
-          {% if cron_rows|length == 0 %}<tr><td colspan="6">Sin datos</td></tr>{% endif %}
+          {% if cron_rows|length == 0 %}<tr>
+            <td colspan="6">Sin datos</td>
+          </tr>{% endif %}
         </table>
       </div>
     </div>
@@ -977,7 +1954,8 @@
         <div class="pill">Target: <span id="anTarget">-</span></div>
         <div class="pill">Stop: <span id="anStop">-</span></div>
       </div>
-      <svg id="anCandle" viewBox="0 0 900 260" style="width:100%;height:260px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222"></svg>
+      <svg id="anCandle" viewBox="0 0 900 260"
+        style="width:100%;height:260px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222"></svg>
     </div>
   </div>
   <script>
@@ -986,13 +1964,13 @@
     const btns = document.querySelectorAll('[data-tab-btn]');
     const tabs = document.querySelectorAll('[data-tab]');
 
-    function activateTab(name){
+    function activateTab(name) {
       btns.forEach(x => x.classList.remove('active'));
       tabs.forEach(t => t.classList.remove('active'));
       const btn = document.querySelector(`[data-tab-btn="${name}"]`);
       const pane = document.querySelector(`[data-tab="${name}"]`);
-      if(btn) btn.classList.add('active');
-      if(pane) pane.classList.add('active');
+      if (btn) btn.classList.add('active');
+      if (pane) pane.classList.add('active');
     }
 
     const savedTab = localStorage.getItem('dashboard_active_tab') || 'inicio';
@@ -1001,8 +1979,8 @@
     const body = document.body;
     const modeBtn = document.getElementById('modeToggle');
     const expertMode = localStorage.getItem('dashboard_expert_mode') === '1';
-    if(expertMode){ body.classList.add('expert'); }
-    if(modeBtn){ modeBtn.textContent = `Modo experto: ${body.classList.contains('expert') ? 'ON' : 'OFF'}`; }
+    if (expertMode) { body.classList.add('expert'); }
+    if (modeBtn) { modeBtn.textContent = `Modo experto: ${body.classList.contains('expert') ? 'ON' : 'OFF'}`; }
 
     btns.forEach(b => {
       b.addEventListener('click', () => {
@@ -1012,161 +1990,163 @@
       });
     });
 
-    if(modeBtn){
+    if (modeBtn) {
       modeBtn.addEventListener('click', () => {
         body.classList.toggle('expert');
         localStorage.setItem('dashboard_expert_mode', body.classList.contains('expert') ? '1' : '0');
         modeBtn.textContent = `Modo experto: ${body.classList.contains('expert') ? 'ON' : 'OFF'}`;
-        if(!body.classList.contains('expert')){
+        if (!body.classList.contains('expert')) {
           activateTab('inicio');
-          localStorage.setItem('dashboard_active_tab','inicio');
+          localStorage.setItem('dashboard_active_tab', 'inicio');
         }
       });
     }
 
     // Drawdown/equity simple chart
-    (function(){
+    (function () {
       const svg = document.getElementById('equityChart');
-      if(!svg) return;
-      const data = {{ equity_curve|tojson }};
-      if(!Array.isArray(data) || data.length < 2) return;
-      const w = 600, h = 180, pad = 20;
-      const min = Math.min(...data), max = Math.max(...data);
-      const span = (max - min) || 1;
-      const x = (i) => pad + (i/(data.length-1))*(w-2*pad);
-      const y = (v) => h-pad-((v-min)/span)*(h-2*pad);
-      const pts = data.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
-      const baseY = y(0);
-      svg.innerHTML = `
-        <line x1="${pad}" y1="${baseY}" x2="${w-pad}" y2="${baseY}" stroke="#35518a" stroke-dasharray="4 4" />
+      if (!svg) return;
+      const data = {{ equity_curve| tojson
+    }};
+    if (!Array.isArray(data) || data.length < 2) return;
+    const w = 600, h = 180, pad = 20;
+    const min = Math.min(...data), max = Math.max(...data);
+    const span = (max - min) || 1;
+    const x = (i) => pad + (i / (data.length - 1)) * (w - 2 * pad);
+    const y = (v) => h - pad - ((v - min) / span) * (h - 2 * pad);
+    const pts = data.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+    const baseY = y(0);
+    svg.innerHTML = `
+        <line x1="${pad}" y1="${baseY}" x2="${w - pad}" y2="${baseY}" stroke="#35518a" stroke-dasharray="4 4" />
         <polyline points="${pts}" fill="none" stroke="#8ad4ff" stroke-width="2.5" />
       `;
-    })();
+    }) ();
 
     // Oficina viva (movimiento entre salas)
-    (function(){
+    (function () {
       const map = document.getElementById('officeMap');
-      if(!map) return;
-      const agents = {{ agents_runtime|tojson }};
-      const live = {{ agent_live|tojson }};
-      const topOps = {{ (signals.top_opportunities if signals.top_opportunities is defined else [])|tojson }};
-      const hasConclave = Array.isArray(topOps) && topOps.length > 0;
+      if (!map) return;
+      const agents = {{ agents_runtime| tojson
+    }};
+    const live = {{ agent_live| tojson }};
+    const topOps = {{ (signals.top_opportunities if signals.top_opportunities is defined else[])| tojson }};
+    const hasConclave = Array.isArray(topOps) && topOps.length > 0;
 
-      // Versión final: cónclave dinámico según evidencia real del top ticker
-      const top = (Array.isArray(topOps) && topOps.length) ? topOps[0] : null;
-      const inConclave = new Set();
+    // Versión final: cónclave dinámico según evidencia real del top ticker
+    const top = (Array.isArray(topOps) && topOps.length) ? topOps[0] : null;
+    const inConclave = new Set();
+    if (top) {
+      inConclave.add('alpha-scout');
+      if ((top.score_macro_adj ?? 0) !== 0 || (top.reasons || []).some(r => String(r).includes('macro'))) inConclave.add('macro-agent');
+      if ((top.catalyst_score ?? 0) > 0 || (top.fundamental_inflection_score ?? 0) > 0) inConclave.add('news-catalyst-agent');
+      if ((top.score_tech ?? 0) >= 45 || top.breakout_20 || (top.rel_volume ?? 0) >= 1.1) inConclave.add('technical-agent');
+      if ((top.argumento_en_contra || '').toLowerCase() !== 'sin objeción crítica detectada') inConclave.add('devil-advocate-agent');
+      if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) inConclave.add('risk-exec-agent');
+      const conf = Number(top.confidence_pct ?? top.score_final ?? 0);
+      const critical = ((top.state === 'READY' || top.state === 'TRIGGERED') && conf >= 75) || (top.decision_final === 'AVOID');
+      if (critical) inConclave.add('local-council-agent');
+    }
+
+    const conclaveEl = document.getElementById('conclaveCount');
+    if (conclaveEl) {
+      conclaveEl.textContent = `Agentes reunidos en cónclave: ${inConclave.size}/${agents.length}`;
+    }
+    const gptAlert = document.getElementById('gpt53Alert');
+    if (gptAlert) {
+      if (inConclave.has('local-council-agent')) {
+        gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo Local Qwen3) está arbitrando la decisión final.';
+      } else {
+        gptAlert.innerHTML = '<span class="badge ok">Modo normal</span> Sin arbitraje del consejo local en este ciclo.';
+      }
+    }
+
+    const agentNames = {
+      'alpha-scout': 'Alex (Coordinador estratégico)',
+      'macro-agent': 'Marta (Macro y contexto global)',
+      'news-catalyst-agent': 'Nora (Noticias y catalizadores)',
+      'technical-agent': 'Teo (Análisis técnico)',
+      'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
+      'devil-advocate-agent': 'Diego (Abogado del Diablo)',
+      'local-council-agent': 'Gaia (Consejo Local Qwen3)',
+      'crypto-news-spy-agent': 'Nico (Espía noticias cripto)',
+      'crypto-euphoria-spy-agent': 'Eva (Espía euforia cripto)',
+      'crypto-flow-spy-agent': 'Flux (Espía flujo cripto)',
+      'crypto-whale-spy-agent': 'Wally (Espía ballenas)',
+      'crypto-execution-agent': 'Rex (Ejecución rápida cripto)',
+      'crypto-chart-agent': 'Cora (Analista de velas cripto)',
+      'crypto-breakout-agent': 'Bolt (Cazador de ruptura)',
+    };
+
+    const roomTargets = {
+      'macro-agent': 'room-agents-macro-agent',
+      'news-catalyst-agent': 'room-agents-news-catalyst-agent',
+      'technical-agent': 'room-agents-technical-agent',
+      'risk-exec-agent': 'room-agents-risk-exec-agent',
+      'devil-advocate-agent': 'room-agents-devil-advocate-agent',
+      'alpha-scout': 'room-agents-alpha-scout',
+      'local-council-agent': 'room-agents-local-council-agent',
+      'crypto-news-spy-agent': 'room-agents-crypto-news-spy-agent',
+      'crypto-euphoria-spy-agent': 'room-agents-crypto-euphoria-spy-agent',
+      'crypto-flow-spy-agent': 'room-agents-crypto-flow-spy-agent',
+      'crypto-whale-spy-agent': 'room-agents-crypto-whale-spy-agent',
+      'crypto-execution-agent': 'room-agents-crypto-execution-agent',
+      'crypto-chart-agent': 'room-agents-crypto-chart-agent',
+      'crypto-breakout-agent': 'room-agents-crypto-breakout-agent',
+    };
+
+    agents.forEach((a) => {
+      const liveRow = (live || []).find(x => x.agent === a.id);
+      const txt = ((liveRow && liveRow.text) || '').toLowerCase();
+      const transit = txt.includes('envi') || txt.includes('consenso');
+      const conclave = inConclave.has(a.id);
+
+      const tag = document.createElement('div');
+      tag.className = 'agent-tag';
+      if (transit) tag.classList.add('in-transit');
+      if (conclave) tag.classList.add('in-conclave');
+      tag.textContent = agentNames[a.id] || a.id;
+
+      // Regla visual estricta: cada agente solo puede estar en UNA sala.
+      // Prioridad: cónclave > sala base.
+      if (conclave) {
+        const conclaveRoom = document.getElementById('room-agents-conclave');
+        if (conclaveRoom) conclaveRoom.appendChild(tag);
+      } else {
+        const baseRoom = document.getElementById(roomTargets[a.id]);
+        if (baseRoom) baseRoom.appendChild(tag);
+      }
+    });
+
+    // Log narrativo de conversaciones
+    const logEl = document.getElementById('agentChatLog');
+    if (logEl) {
+      const lines = [];
+      const hhmm = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const say = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> ${msg}</div></div>`);
+      const think = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> Pienso <em>(${msg})</em></div></div>`);
+
       if (top) {
-        inConclave.add('alpha-scout');
-        if ((top.score_macro_adj ?? 0) !== 0 || (top.reasons || []).some(r => String(r).includes('macro'))) inConclave.add('macro-agent');
-        if ((top.catalyst_score ?? 0) > 0 || (top.fundamental_inflection_score ?? 0) > 0) inConclave.add('news-catalyst-agent');
-        if ((top.score_tech ?? 0) >= 45 || top.breakout_20 || (top.rel_volume ?? 0) >= 1.1) inConclave.add('technical-agent');
-        if ((top.argumento_en_contra || '').toLowerCase() !== 'sin objeción crítica detectada') inConclave.add('devil-advocate-agent');
-        if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) inConclave.add('risk-exec-agent');
-        const conf = Number(top.confidence_pct ?? top.score_final ?? 0);
-        const critical = ((top.state === 'READY' || top.state === 'TRIGGERED') && conf >= 75) || (top.decision_final === 'AVOID');
-        if (critical) inConclave.add('local-council-agent');
+        say(agentNames['macro-agent'], 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
+        say(agentNames['news-catalyst-agent'], `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
+        think(agentNames['technical-agent'], `si el volumen acompaña, esta estructura puede tener continuidad`);
+        say(agentNames['technical-agent'], `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
+        think(agentNames['devil-advocate-agent'], (top.argumento_en_contra || 'no tengo objeción crítica ahora mismo'));
+        say(agentNames['risk-exec-agent'], `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
+        think(agentNames['alpha-scout'], `debo cerrar una decisión clara y ejecutable`);
+        say(agentNames['alpha-scout'], `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
+      } else {
+        say(agentNames['alpha-scout'], 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
       }
 
-      const conclaveEl = document.getElementById('conclaveCount');
-      if (conclaveEl) {
-        conclaveEl.textContent = `Agentes reunidos en cónclave: ${inConclave.size}/${agents.length}`;
-      }
-      const gptAlert = document.getElementById('gpt53Alert');
-      if (gptAlert) {
-        if (inConclave.has('local-council-agent')) {
-          gptAlert.innerHTML = '<span class="badge warn">Caso crítico</span> Gaia (Consejo Local Qwen3) está arbitrando la decisión final.';
-        } else {
-          gptAlert.innerHTML = '<span class="badge ok">Modo normal</span> Sin arbitraje del consejo local en este ciclo.';
-        }
-      }
-
-      const agentNames = {
-        'alpha-scout': 'Alex (Coordinador estratégico)',
-        'macro-agent': 'Marta (Macro y contexto global)',
-        'news-catalyst-agent': 'Nora (Noticias y catalizadores)',
-        'technical-agent': 'Teo (Análisis técnico)',
-        'risk-exec-agent': 'Rafa (Riesgo y ejecución)',
-        'devil-advocate-agent': 'Diego (Abogado del Diablo)',
-        'local-council-agent': 'Gaia (Consejo Local Qwen3)',
-        'crypto-news-spy-agent': 'Nico (Espía noticias cripto)',
-        'crypto-euphoria-spy-agent': 'Eva (Espía euforia cripto)',
-        'crypto-flow-spy-agent': 'Flux (Espía flujo cripto)',
-        'crypto-whale-spy-agent': 'Wally (Espía ballenas)',
-        'crypto-execution-agent': 'Rex (Ejecución rápida cripto)',
-        'crypto-chart-agent': 'Cora (Analista de velas cripto)',
-        'crypto-breakout-agent': 'Bolt (Cazador de ruptura)',
-      };
-
-      const roomTargets = {
-        'macro-agent': 'room-agents-macro-agent',
-        'news-catalyst-agent': 'room-agents-news-catalyst-agent',
-        'technical-agent': 'room-agents-technical-agent',
-        'risk-exec-agent': 'room-agents-risk-exec-agent',
-        'devil-advocate-agent': 'room-agents-devil-advocate-agent',
-        'alpha-scout': 'room-agents-alpha-scout',
-        'local-council-agent': 'room-agents-local-council-agent',
-        'crypto-news-spy-agent': 'room-agents-crypto-news-spy-agent',
-        'crypto-euphoria-spy-agent': 'room-agents-crypto-euphoria-spy-agent',
-        'crypto-flow-spy-agent': 'room-agents-crypto-flow-spy-agent',
-        'crypto-whale-spy-agent': 'room-agents-crypto-whale-spy-agent',
-        'crypto-execution-agent': 'room-agents-crypto-execution-agent',
-        'crypto-chart-agent': 'room-agents-crypto-chart-agent',
-        'crypto-breakout-agent': 'room-agents-crypto-breakout-agent',
-      };
-
-      agents.forEach((a) => {
-        const liveRow = (live || []).find(x => x.agent === a.id);
-        const txt = ((liveRow && liveRow.text) || '').toLowerCase();
-        const transit = txt.includes('envi') || txt.includes('consenso');
-        const conclave = inConclave.has(a.id);
-
-        const tag = document.createElement('div');
-        tag.className = 'agent-tag';
-        if (transit) tag.classList.add('in-transit');
-        if (conclave) tag.classList.add('in-conclave');
-        tag.textContent = agentNames[a.id] || a.id;
-
-        // Regla visual estricta: cada agente solo puede estar en UNA sala.
-        // Prioridad: cónclave > sala base.
-        if (conclave) {
-          const conclaveRoom = document.getElementById('room-agents-conclave');
-          if (conclaveRoom) conclaveRoom.appendChild(tag);
-        } else {
-          const baseRoom = document.getElementById(roomTargets[a.id]);
-          if (baseRoom) baseRoom.appendChild(tag);
-        }
+      (live || []).slice(0, 4).forEach(x => {
+        say(agentNames[x.agent] || x.agent, x.text || 'Sin novedad por ahora.');
       });
 
-      // Log narrativo de conversaciones
-      const logEl = document.getElementById('agentChatLog');
-      if (logEl) {
-        const lines = [];
-        const hhmm = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        const say = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> ${msg}</div></div>`);
-        const think = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg"><strong>${who}:</strong> Pienso <em>(${msg})</em></div></div>`);
+      logEl.innerHTML = lines.join('');
+    }
+    }) ();
 
-        if (top) {
-          say(agentNames['macro-agent'], 'He revisado el contexto global. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No veo bloqueo macro fuerte.' : 'Veo viento macro en contra.'));
-          say(agentNames['news-catalyst-agent'], `He encontrado señal en ${top.ticker}. Catalizadores: ${top.catalyst_score ?? 0}.`);
-          think(agentNames['technical-agent'], `si el volumen acompaña, esta estructura puede tener continuidad`);
-          say(agentNames['technical-agent'], `Estructura técnica en ${top.ticker}: score ${top.score_tech ?? '-'} y volumen relativo ${top.rel_volume ?? '-'}.`);
-          think(agentNames['devil-advocate-agent'], (top.argumento_en_contra || 'no tengo objeción crítica ahora mismo'));
-          say(agentNames['risk-exec-agent'], `Desde riesgo, mi postura es ${top.decision_final || 'HOLD'} con estado ${top.state || 'WATCH'}.`);
-          think(agentNames['alpha-scout'], `debo cerrar una decisión clara y ejecutable`);
-          say(agentNames['alpha-scout'], `Cónclave cerrado para ${top.ticker}: decisión final ${top.decision_final || 'HOLD'} (confianza ${top.confidence_pct ?? top.score_final ?? '-'}%).`);
-        } else {
-          say(agentNames['alpha-scout'], 'No hay oportunidad clara ahora. Seguimos monitoreando en automático.');
-        }
-
-        (live || []).slice(0,4).forEach(x => {
-          say(agentNames[x.agent] || x.agent, x.text || 'Sin novedad por ahora.');
-        });
-
-        logEl.innerHTML = lines.join('');
-      }
-    })();
-
-    async function openAnalysis(ticker){
+    async function openAnalysis(ticker) {
       const modal = document.getElementById('analysisModal');
       modal.style.display = 'flex';
       const res = await fetch(`/api/analysis/${encodeURIComponent(ticker)}`);
@@ -1180,28 +2160,29 @@
 
       const svg = document.getElementById('anCandle');
       const c = Array.isArray(d.candles) ? d.candles : [];
-      if(c.length < 2){ svg.innerHTML=''; return; }
-      const w=900,h=260,p=24;
-      const hi=Math.max(...c.map(x=>x.h));
-      const lo=Math.min(...c.map(x=>x.l));
-      const span=(hi-lo)||1;
-      const xStep=(w-2*p)/c.length;
-      const y=v=>h-p-((v-lo)/span)*(h-2*p);
-      const bodyW=Math.max(2, xStep*0.55);
-      let html='';
-      c.forEach((k,i)=>{
-        const x=p+i*xStep+xStep/2;
-        const color=k.c>=k.o ? '#22c55e' : '#ef4444';
+      if (c.length < 2) { svg.innerHTML = ''; return; }
+      const w = 900, h = 260, p = 24;
+      const hi = Math.max(...c.map(x => x.h));
+      const lo = Math.min(...c.map(x => x.l));
+      const span = (hi - lo) || 1;
+      const xStep = (w - 2 * p) / c.length;
+      const y = v => h - p - ((v - lo) / span) * (h - 2 * p);
+      const bodyW = Math.max(2, xStep * 0.55);
+      let html = '';
+      c.forEach((k, i) => {
+        const x = p + i * xStep + xStep / 2;
+        const color = k.c >= k.o ? '#22c55e' : '#ef4444';
         html += `<line x1="${x}" y1="${y(k.h)}" x2="${x}" y2="${y(k.l)}" stroke="${color}" stroke-width="1.2"/>`;
-        const by=Math.min(y(k.o),y(k.c));
-        const bh=Math.max(1,Math.abs(y(k.o)-y(k.c)));
-        html += `<rect x="${x-bodyW/2}" y="${by}" width="${bodyW}" height="${bh}" fill="${color}" opacity="0.9"/>`;
+        const by = Math.min(y(k.o), y(k.c));
+        const bh = Math.max(1, Math.abs(y(k.o) - y(k.c)));
+        html += `<rect x="${x - bodyW / 2}" y="${by}" width="${bodyW}" height="${bh}" fill="${color}" opacity="0.9"/>`;
       });
       svg.innerHTML = html;
     }
-    function closeAnalysis(){ document.getElementById('analysisModal').style.display='none'; }
+    function closeAnalysis() { document.getElementById('analysisModal').style.display = 'none'; }
 
     setTimeout(() => location.reload(), 30000);
   </script>
 </body>
+
 </html>

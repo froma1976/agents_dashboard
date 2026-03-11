@@ -837,6 +837,25 @@ def crypto_resume():
     return RedirectResponse(url="/?crypto=resumed", status_code=303)
 
 
+@app.post("/kill_switch")
+def kill_switch():
+    d = load_crypto_orders()
+    daily = d.get("daily", {}) or {}
+    daily["paused"] = True
+    daily["pause_reason"] = "EMERGENCIA KILL SWITCH"
+    d["daily"] = daily
+    CRYPTO_ORDERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CRYPTO_ORDERS_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("UPDATE tasks SET status='cancelled', updated_at=? WHERE status IN ('pending', 'running')", (now_iso(),))
+        conn.commit()
+    finally:
+        conn.close()
+    return RedirectResponse(url="/?kill=activated", status_code=303)
+
+
 @app.post("/signals/autotasks")
 def create_tasks_from_top(threshold: int = Form(60), assigned_to: str = Form("alpha-scout")):
     signals = load_signals_snapshot()
