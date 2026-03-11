@@ -1301,6 +1301,77 @@ def home(request: Request):
         },
     )
 
+# ===== BEGIN_LSTM_REAL_SAFE =====
+import re
+from pathlib import Path
+from fastapi.responses import HTMLResponse
+from fastapi import Request
+
+BASE_LSTM = Path(r"C:\Users\Fernando\.openclaw\workspace\proyectos\analisis-mercados")
+LSTM_LOG = BASE_LSTM / "logs" / "history_update_and_train.log"
+LSTM_LOCK = BASE_LSTM / "logs" / "history_train.lock"
+
+def _tail(path: Path, n: int = 200) -> str:
+    if not path.exists():
+        return ""
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        lines = f.readlines()
+    return "".join(lines[-n:])
+
+@app.get("/lstm-real", response_class=HTMLResponse)
+def lstm_real_page(request: Request):
+    html = """
+    <!doctype html><html><head><meta charset="utf-8"/>
+    <title>LSTM Real</title>
+    <style>
+      body{font-family:system-ui,Segoe UI,Arial;margin:16px;background:#070b14;color:#eaf0ff}
+      pre{background:#0b0f14;color:#d7e0ea;padding:12px;border:1px solid #2a3a5b;border-radius:10px;max-height:70vh;overflow:auto}
+      .ok{color:#22c55e;font-weight:700} .bad{color:#ef4444;font-weight:700}
+      button{padding:8px 12px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer}
+    </style></head><body>
+      <h2>LSTM Real Monitor</h2>
+      <div style="margin-bottom:10px">
+        Estado: <span id="st">...</span> | 
+        Último entrenamiento finalizado: <span id="end">...</span>
+      </div>
+      <button onclick="load()">Actualizar ahora</button>
+      <pre id="log" style="margin-top:15px">Cargando log de entrenamiento...</pre>
+      <script>
+        async function load(){
+          try {
+            const r = await fetch('/api/lstm-real/status');
+            const j = await r.json();
+            document.getElementById('st').textContent = j.training ? 'ENTRENANDO' : 'IDLE';
+            document.getElementById('st').className = j.training ? 'ok' : 'bad';
+            document.getElementById('end').textContent = j.last_end ? (j.last_end.ended_at + ' (exit=' + j.last_end.exit + ')') : 'N/A';
+            document.getElementById('log').textContent = j.log_tail || '(sin log disponible)';
+          } catch(e) {
+            document.getElementById('log').textContent = 'Error cargando datos: ' + e;
+          }
+        }
+        load(); setInterval(load, 10000);
+      </script>
+    </body></html>
+    """
+    return HTMLResponse(html)
+
+@app.get("/api/lstm-real/status")
+def lstm_real_status():
+    log_tail = _tail(LSTM_LOG, n=220)
+    last_end = None
+    if log_tail:
+        for m in re.finditer(r"\[(?P<ts>[^\]]+)\]\s+END\s+exit=(?P<exit>-?\d+)", log_tail):
+            last_end = {"ended_at": m.group("ts"), "exit": int(m.group("exit"))}
+    return {
+        "ok": True,
+        "training": LSTM_LOCK.exists(),
+        "log_path": str(LSTM_LOG),
+        "last_end": last_end,
+        "log_tail": log_tail,
+    }
+# ===== END_LSTM_REAL_SAFE =====
+
+
 # ===== BEGIN_CONTROL_PAGE =====
 from pathlib import Path
 from fastapi.responses import HTMLResponse

@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OpenClaw Control</title>
+  <style>
+    body { margin:0; font-family: system-ui, Segoe UI, Arial; height:100vh; display:flex; flex-direction:column; }
+    .tabs { display:flex; gap:8px; padding:10px; border-bottom:1px solid #ddd; background:#fafafa; }
+    .tab { padding:8px 12px; border:1px solid #ccc; border-radius:10px; background:#fff; cursor:pointer; user-select:none; }
+    .tab.active { background:#111; color:#fff; border-color:#111; }
+    .framewrap { flex:1; }
+    iframe { width:100%; height:100%; border:0; }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+  <div class="tab" data-url="/lstm-real">LSTM Real</div>
+  <div class="tab active" data-url="/">Finanzas</div>
+  <div class="tab" data-url="/health">Health</div>
+  <div class="tab" data-url="/docs">API Docs</div>
+  <div class="tab" data-url="/redoc">API Redoc</div>
+</div>
+
+  <div class="framewrap">
+    <iframe id="frame" src="/"></iframe>
+  </div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const frame = document.getElementById('frame');
+
+  function setActive(el){
+    tabs.forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    frame.src = el.dataset.url;
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => setActive(t)));
+</script>
+</body>
+</html>
