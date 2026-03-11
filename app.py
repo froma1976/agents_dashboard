@@ -31,6 +31,7 @@ CRYPTO_ORDERS_PATH = Path(os.getenv("CRYPTO_ORDERS_PATH", "C:/Users/Fernando/.op
 CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
 LEARNING_STATUS_PATH = Path(os.getenv("LEARNING_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/learning_status.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
+STARTUP_LOG_PATH = Path(os.getenv("STARTUP_LOG_PATH", "C:/Users/Fernando/.openclaw/workspace/startup-stack.log"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
 
 app = FastAPI(title="Agent Ops Dashboard")
@@ -335,6 +336,136 @@ def minutes_since_file(path: Path):
         return int((datetime.now(UTC) - m).total_seconds() // 60)
     except Exception:
         return None
+
+
+def tail_text(path: Path, lines: int = 120) -> str:
+    try:
+        if not path.exists():
+            return ""
+        with path.open("r", encoding="utf-8", errors="replace") as f:
+            rows = f.readlines()
+        return "".join(rows[-lines:])
+    except Exception:
+        return ""
+
+
+def run_command(command: list[str], timeout: int = 8) -> dict:
+    try:
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+        return {
+            "ok": proc.returncode == 0,
+            "returncode": proc.returncode,
+            "stdout": (proc.stdout or "").strip(),
+            "stderr": (proc.stderr or "").strip(),
+        }
+    except Exception as exc:
+        return {"ok": False, "returncode": None, "stdout": "", "stderr": str(exc)}
+
+
+def port_status(port: int) -> dict:
+    info = {"port": port, "listening": False, "pid": None, "process": None}
+    res = run_command(["netstat", "-ano"], timeout=6)
+    if not res.get("ok"):
+        return info
+
+    for line in (res.get("stdout") or "").splitlines():
+        if f":{port}" not in line or "LISTENING" not in line:
+            continue
+        parts = line.split()
+        if not parts:
+            continue
+        try:
+            pid = int(parts[-1])
+        except Exception:
+            pid = None
+        info["listening"] = True
+        info["pid"] = pid
+        if pid:
+            task = run_command(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"], timeout=6)
+            first = (task.get("stdout") or "").splitlines()
+            if first and "No tasks are running" not in first[0] and "No hay tareas" not in first[0]:
+                info["process"] = first[0]
+        break
+    return info
+
+
+def scheduled_task_status(name: str) -> dict:
+    res = run_command(["schtasks", "/Query", "/TN", name, "/FO", "LIST", "/V"], timeout=10)
+    if not res.get("ok"):
+        return {"name": name, "exists": False, "raw": res.get("stderr") or res.get("stdout") or "No disponible"}
+
+    raw = res.get("stdout") or ""
+    parsed = {}
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        parsed[key.strip()] = value.strip()
+    return {
+        "name": name,
+        "exists": True,
+        "state": parsed.get("Estado") or parsed.get("Status"),
+        "last_result": parsed.get("Ultimo resultado") or parsed.get("Last Result"),
+        "last_run": parsed.get("Ultimo tiempo de ejecucion") or parsed.get("Last Run Time"),
+        "next_run": parsed.get("Hora proxima ejecucion") or parsed.get("Next Run Time"),
+        "raw": raw,
+    }
+
+
+def sysadmin_snapshot():
+    run_status = system_status()
+    return {
+        "generated_at": now_iso(),
+        "run_status": run_status,
+        "dashboard": port_status(8080),
+        "gateway": port_status(18789),
+        "startup_log_tail": tail_text(STARTUP_LOG_PATH, 80),
+        "lstm_log_tail": tail_text(BASE_LSTM / "logs" / "history_update_and_train.log", 80),
+        "snapshot_file_min": minutes_since_file(SNAPSHOT_PATH),
+        "autopilot_log_min": minutes_since_file(AUTOPILOT_LOG),
+        "backup_root_min": run_status.get("backup_min"),
+        "scheduled_tasks": [
+            scheduled_task_status(name)
+            for name in [
+                "OpenClaw-Autopilot-15m",
+                "OpenClaw-State-Backup-10m",
+                "OpenClaw-Learning-Daily",
+                "OpenClaw-Crypto-Ingest-2m",
+                "OpenClaw-Crypto-Scalp-1m",
+                "OpenClaw-Crypto-Stream-Probe-3m",
+                "OpenClaw-Crypto-Watchdog-10m",
+                "LSTM Train (6h)",
+            ]
+        ],
+    }
+
+
+def terminal_snapshot():
+    sysinfo = sysadmin_snapshot()
+    return {
+        "generated_at": now_iso(),
+        "dashboard": sysinfo.get("dashboard"),
+        "gateway": sysinfo.get("gateway"),
+        "startup_log_tail": sysinfo.get("startup_log_tail"),
+        "lstm_log_tail": sysinfo.get("lstm_log_tail"),
+        "health": health(),
+        "routes": sorted([r.path for r in app.routes if getattr(r, "path", None)]),
+        "commands": [
+            'C:\\Windows\\py.exe -3 -m uvicorn app:app --host 127.0.0.1 --port 8080',
+            'openclaw status',
+            'openclaw gateway restart',
+            'schtasks /Query /TN "OpenClaw-Autopilot-15m" /FO LIST',
+            'type "C:\\Users\\Fernando\\.openclaw\\workspace\\startup-stack.log"',
+        ],
+    }
 
 
 def system_status():
@@ -1303,9 +1434,6 @@ def home(request: Request):
 
 # ===== BEGIN_LSTM_REAL_SAFE =====
 import re
-from pathlib import Path
-from fastapi.responses import HTMLResponse
-from fastapi import Request
 
 BASE_LSTM = Path(r"C:\Users\Fernando\.openclaw\workspace\proyectos\analisis-mercados")
 LSTM_LOG = BASE_LSTM / "logs" / "history_update_and_train.log"
@@ -1372,10 +1500,140 @@ def lstm_real_status():
 # ===== END_LSTM_REAL_SAFE =====
 
 
-# ===== BEGIN_CONTROL_PAGE =====
-from pathlib import Path
-from fastapi.responses import HTMLResponse
+@app.get("/sysadmin", response_class=HTMLResponse)
+def sysadmin_page(request: Request):
+    html = """
+    <!doctype html><html><head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>SysAdmin</title>
+    <style>
+      :root{--bg:#08111d;--panel:#0f1b2e;--panel2:#13243d;--line:#284464;--txt:#ebf2ff;--muted:#8ea6c9;--ok:#30c48d;--warn:#ffb84d;--bad:#ff6b6b}
+      *{box-sizing:border-box}body{margin:0;font-family:Georgia,"Segoe UI",serif;background:radial-gradient(circle at top,#18365c 0,#08111d 55%);color:var(--txt)}
+      .wrap{max-width:1240px;margin:0 auto;padding:24px 18px 30px}.hero{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:18px}
+      h1{margin:0;font-size:30px} .muted{color:var(--muted)} .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+      .card{grid-column:span 12;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 40px #00000030}
+      .span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
+      .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#0a1526;font-size:12px;color:#d8e6ff}
+      .kpi{font-size:28px;font-weight:700;margin-top:6px}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+      table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #23405e;text-align:left;vertical-align:top}th{color:#bfd3f7}
+      pre{margin:0;background:#07111e;border:1px solid #223c57;border-radius:14px;padding:12px;overflow:auto;max-height:300px;white-space:pre-wrap}
+      @media (max-width:920px){.span4,.span6,.span8{grid-column:span 12}.hero{display:block}}
+    </style></head><body>
+      <div class="wrap">
+        <div class="hero">
+          <div>
+            <div class="pill">Cabina operativa local</div>
+            <h1>SysAdmin</h1>
+            <div class="muted">Estado del stack sin tocar la home de finanzas.</div>
+          </div>
+          <div class="muted">Auto refresh cada 15s</div>
+        </div>
+        <div class="grid">
+          <div class="card span4"><div class="muted">Dashboard 8080</div><div class="kpi" id="dashState">...</div><div class="muted" id="dashMeta"></div></div>
+          <div class="card span4"><div class="muted">Gateway 18789</div><div class="kpi" id="gwState">...</div><div class="muted" id="gwMeta"></div></div>
+          <div class="card span4"><div class="muted">Modo del sistema</div><div class="kpi" id="sysMode">...</div><div class="muted" id="sysMeta"></div></div>
+          <div class="card span12"><h2>Tareas programadas</h2><table><thead><tr><th>Tarea</th><th>Estado</th><th>Ultima</th><th>Siguiente</th><th>Resultado</th></tr></thead><tbody id="tasksRows"></tbody></table></div>
+          <div class="card span6"><h2>Startup log</h2><pre id="startupLog">Cargando...</pre></div>
+          <div class="card span6"><h2>LSTM log</h2><pre id="lstmLog">Cargando...</pre></div>
+        </div>
+      </div>
+      <script>
+        function badgeClass(ok, warn){ return ok ? 'ok' : (warn ? 'warn' : 'bad'); }
+        function yesNo(flag){ return flag ? 'ACTIVO' : 'CAIDO'; }
+        async function load(){
+          const r = await fetch('/api/sysadmin/status');
+          const j = await r.json();
+          const dash = j.dashboard || {};
+          const gw = j.gateway || {};
+          const rs = j.run_status || {};
+          const dashNode = document.getElementById('dashState');
+          dashNode.textContent = yesNo(!!dash.listening);
+          dashNode.className = 'kpi ' + badgeClass(!!dash.listening, false);
+          document.getElementById('dashMeta').textContent = dash.pid ? ('PID ' + dash.pid) : 'Sin listener';
+          const gwNode = document.getElementById('gwState');
+          gwNode.textContent = yesNo(!!gw.listening);
+          gwNode.className = 'kpi ' + badgeClass(!!gw.listening, false);
+          document.getElementById('gwMeta').textContent = gw.pid ? ('PID ' + gw.pid) : 'Sin listener';
+          const sysNode = document.getElementById('sysMode');
+          sysNode.textContent = (rs.status || 'REVISAR') + ' / ' + (rs.mode || 'DEGRADADO');
+          sysNode.className = 'kpi ' + (rs.color || 'warn');
+          document.getElementById('sysMeta').textContent = 'snapshot ' + (j.snapshot_file_min ?? 'n/d') + ' min · autopilot ' + (j.autopilot_log_min ?? 'n/d') + ' min';
+          document.getElementById('startupLog').textContent = j.startup_log_tail || '(sin log)';
+          document.getElementById('lstmLog').textContent = j.lstm_log_tail || '(sin log)';
+          const rows = (j.scheduled_tasks || []).map(t => '<tr><td><strong>' + t.name + '</strong></td><td>' + (t.state || (t.exists ? 'detectada' : 'no encontrada')) + '</td><td>' + (t.last_run || '-') + '</td><td>' + (t.next_run || '-') + '</td><td>' + (t.last_result || '-') + '</td></tr>').join('');
+          document.getElementById('tasksRows').innerHTML = rows || '<tr><td colspan="5">Sin tareas registradas</td></tr>';
+        }
+        load(); setInterval(load, 15000);
+      </script>
+    </body></html>
+    """
+    return HTMLResponse(html)
 
+
+@app.get("/api/sysadmin/status")
+def api_sysadmin_status():
+    return JSONResponse(sysadmin_snapshot())
+
+
+@app.get("/terminal", response_class=HTMLResponse)
+def terminal_page(request: Request):
+    html = """
+    <!doctype html><html><head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Terminal</title>
+    <style>
+      :root{--bg:#05070b;--panel:#0b0e14;--line:#233242;--txt:#d6f6df;--muted:#87c79a;--accent:#7ee787}
+      *{box-sizing:border-box}body{margin:0;font-family:"Cascadia Mono","Consolas",monospace;background:#05070b;color:var(--txt)}
+      .wrap{max-width:1280px;margin:0 auto;padding:20px}.top{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:16px}
+      h1{margin:0;font-size:28px;color:var(--accent)}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+      .card{grid-column:span 12;background:linear-gradient(180deg,#0b0e14,#0a1119);border:1px solid var(--line);border-radius:16px;padding:14px}
+      .span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
+      pre{margin:0;background:#030508;border:1px solid #1a2633;border-radius:12px;padding:12px;overflow:auto;max-height:360px;white-space:pre-wrap}
+      ul{margin:0;padding-left:18px}.chip{display:inline-block;padding:6px 10px;border:1px solid #22432b;border-radius:999px;background:#0a1710;color:#a8f0b4;font-size:12px;margin-right:8px}
+      @media (max-width:920px){.span4,.span6,.span8{grid-column:span 12}.top{display:block}}
+    </style></head><body>
+      <div class="wrap">
+        <div class="top">
+          <div>
+            <div class="chip">Readonly ops console</div>
+            <h1>Terminal</h1>
+            <div class="muted">Vista de logs y comandos utiles, sin romper nada.</div>
+          </div>
+          <div class="muted">Auto refresh cada 10s</div>
+        </div>
+        <div class="grid">
+          <div class="card span4"><div class="muted">Dashboard</div><pre id="dashBlock">...</pre></div>
+          <div class="card span4"><div class="muted">Gateway</div><pre id="gwBlock">...</pre></div>
+          <div class="card span4"><div class="muted">Health API</div><pre id="healthBlock">...</pre></div>
+          <div class="card span8"><div class="muted">Startup log</div><pre id="startupLog">Cargando...</pre></div>
+          <div class="card span4"><div class="muted">Comandos utiles</div><pre id="cmdBlock">Cargando...</pre></div>
+          <div class="card span12"><div class="muted">LSTM training log</div><pre id="lstmLog">Cargando...</pre></div>
+        </div>
+      </div>
+      <script>
+        async function load(){
+          const r = await fetch('/api/terminal/status');
+          const j = await r.json();
+          document.getElementById('dashBlock').textContent = JSON.stringify(j.dashboard || {}, null, 2);
+          document.getElementById('gwBlock').textContent = JSON.stringify(j.gateway || {}, null, 2);
+          document.getElementById('healthBlock').textContent = JSON.stringify(j.health || {}, null, 2);
+          document.getElementById('startupLog').textContent = j.startup_log_tail || '(sin log)';
+          document.getElementById('lstmLog').textContent = j.lstm_log_tail || '(sin log)';
+          document.getElementById('cmdBlock').textContent = (j.commands || []).join('\n');
+        }
+        load(); setInterval(load, 10000);
+      </script>
+    </body></html>
+    """
+    return HTMLResponse(html)
+
+
+@app.get("/api/terminal/status")
+def api_terminal_status():
+    return JSONResponse(terminal_snapshot())
+
+
+# ===== BEGIN_CONTROL_PAGE =====
 @app.get("/control", response_class=HTMLResponse)
 def control_page():
     html_path = Path(__file__).parent / "templates" / "control.html"
