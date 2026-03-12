@@ -1469,6 +1469,9 @@ import re
 BASE_LSTM = Path(r"C:\Users\Fernando\.openclaw\workspace\proyectos\analisis-mercados")
 LSTM_LOG = BASE_LSTM / "logs" / "history_update_and_train.log"
 LSTM_LOCK = BASE_LSTM / "logs" / "history_train.lock"
+LSTM_REGISTRY = BASE_LSTM / "models" / "registry.json"
+LSTM_LEARNING_STATUS = BASE_LSTM / "data" / "learning_status.json"
+LSTM_WALKFORWARD = BASE_LSTM / "reports" / "walkforward_report.md"
 
 def _tail(path: Path, n: int = 200) -> str:
     if not path.exists():
@@ -1477,32 +1480,121 @@ def _tail(path: Path, n: int = 200) -> str:
         lines = f.readlines()
     return "".join(lines[-n:])
 
+
+def _json_or(path: Path, default):
+    try:
+        if not path.exists():
+            return default
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, type(default)) or isinstance(default, (dict, list)) else data
+    except Exception:
+        return default
+
+
+def _walkforward_rows() -> list[dict]:
+    if not LSTM_WALKFORWARD.exists():
+        return []
+    rows = []
+    try:
+        for line in LSTM_WALKFORWARD.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = re.match(r"\|\s*([A-Z0-9_]+)\s*\|\s*([0-9.]+)\s*\|\s*([0-9.]+)\s*\|", line)
+            if not m or m.group(1) == "Symbol":
+                continue
+            baseline = float(m.group(2))
+            lstm = float(m.group(3))
+            rows.append({
+                "symbol": m.group(1),
+                "baseline_acc": baseline,
+                "lstm_acc": lstm,
+                "delta": round(lstm - baseline, 3),
+            })
+    except Exception:
+        return []
+    return rows
+
 @app.get("/lstm-real", response_class=HTMLResponse)
 def lstm_real_page(request: Request):
     html = """
     <!doctype html><html><head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>LSTM Real</title>
     <style>
-      body{font-family:system-ui,Segoe UI,Arial;margin:16px;background:#070b14;color:#eaf0ff}
-      pre{background:#0b0f14;color:#d7e0ea;padding:12px;border:1px solid #2a3a5b;border-radius:10px;max-height:70vh;overflow:auto}
-      .ok{color:#22c55e;font-weight:700} .bad{color:#ef4444;font-weight:700}
-      button{padding:8px 12px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer}
+      :root{--bg:#08101a;--panel:#0f1724;--panel2:#101d2f;--line:#27415d;--txt:#e9f2ff;--muted:#91a7c7;--ok:#2fd08d;--warn:#ffba52;--bad:#ff6b6b}
+      *{box-sizing:border-box}body{font-family:Georgia,"Segoe UI",serif;margin:0;background:radial-gradient(circle at top,#173154 0,#08101a 56%);color:var(--txt)}
+      .wrap{max-width:1220px;margin:0 auto;padding:22px 16px 28px}.hero{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:16px}
+      h1{margin:0;font-size:30px}.muted{color:var(--muted)}.pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#091420;font-size:12px}
+      .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{grid-column:span 12;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 36px #0000002b}
+      .span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
+      .kpi{font-size:28px;font-weight:700;margin-top:4px}.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+      button{padding:9px 12px;border-radius:10px;border:1px solid #35518a;background:#1d3b72;color:white;cursor:pointer}
+      table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #223950;text-align:left;vertical-align:top}th{color:#c4d7f5}
+      pre{background:#0b0f14;color:#d7e0ea;padding:12px;border:1px solid #2a3a5b;border-radius:14px;max-height:48vh;overflow:auto;white-space:pre-wrap}
+      .badge{display:inline-block;padding:5px 9px;border-radius:999px;border:1px solid var(--line);font-size:12px;background:#0a1420}
+      @media (max-width:920px){.span3,.span4,.span6,.span8{grid-column:span 12}.hero{display:block}}
     </style></head><body>
-      <h2>LSTM Real Monitor</h2>
-      <div style="margin-bottom:10px">
-        Estado: <span id="st">...</span> | 
-        Último entrenamiento finalizado: <span id="end">...</span>
+      <div class="wrap">
+        <div class="hero">
+          <div>
+            <div class="pill">Modelo predictivo explicado para humanos</div>
+            <h1>LSTM Real</h1>
+            <div class="muted">Aquí ves si el modelo está sano, si mejora frente a una base simple y qué tan útil parece ahora.</div>
+          </div>
+          <div><button onclick="load()">Actualizar ahora</button></div>
+        </div>
+        <div class="grid">
+          <div class="card span3"><div class="muted">Estado</div><div id="st" class="kpi">...</div><div id="stMeta" class="muted"></div></div>
+          <div class="card span3"><div class="muted">Último cierre</div><div id="end" class="kpi">...</div><div id="endMeta" class="muted"></div></div>
+          <div class="card span3"><div class="muted">Edge reciente</div><div id="edgeKpi" class="kpi">...</div><div id="edgeMeta" class="muted"></div></div>
+          <div class="card span3"><div class="muted">Champion models</div><div id="champKpi" class="kpi">...</div><div id="champMeta" class="muted"></div></div>
+          <div class="card span6"><h2>Qué está pasando</h2><div id="humanSummary" class="muted">Cargando...</div><div id="healthBadges" style="margin-top:12px"></div></div>
+          <div class="card span6"><h2>Comparativa rápida</h2><table><thead><tr><th>Símbolo</th><th>Mejor MSE</th><th>LSTM vs base</th><th>Lectura</th></tr></thead><tbody id="modelRows"></tbody></table></div>
+          <div class="card span12"><h2>Walk-forward entendible</h2><table><thead><tr><th>Símbolo</th><th>Base simple</th><th>LSTM</th><th>Mejora</th><th>Veredicto</th></tr></thead><tbody id="wfRows"></tbody></table></div>
+          <div class="card span12"><h2>Log técnico</h2><pre id="log">Cargando log de entrenamiento...</pre></div>
+        </div>
       </div>
-      <button onclick="load()">Actualizar ahora</button>
-      <pre id="log" style="margin-top:15px">Cargando log de entrenamiento...</pre>
       <script>
+        function badge(text, cls){ return `<span class="badge ${cls||''}">${text}</span>` }
         async function load(){
           try {
             const r = await fetch('/api/lstm-real/status');
             const j = await r.json();
-            document.getElementById('st').textContent = j.training ? 'ENTRENANDO' : 'IDLE';
-            document.getElementById('st').className = j.training ? 'ok' : 'bad';
-            document.getElementById('end').textContent = j.last_end ? (j.last_end.ended_at + ' (exit=' + j.last_end.exit + ')') : 'N/A';
+            const statusNode = document.getElementById('st');
+            statusNode.textContent = j.training ? 'ENTRENANDO' : 'EN ESPERA';
+            statusNode.className = 'kpi ' + (j.training ? 'warn' : 'ok');
+            document.getElementById('stMeta').textContent = j.training ? 'Hay un entrenamiento corriendo ahora mismo.' : 'No hay entrenamiento abierto en este instante.';
+            document.getElementById('end').textContent = j.last_end ? (j.last_end.exit === 0 ? 'OK' : 'REVISAR') : 'N/D';
+            document.getElementById('end').className = 'kpi ' + (j.last_end && j.last_end.exit === 0 ? 'ok' : 'warn');
+            document.getElementById('endMeta').textContent = j.last_end ? j.last_end.ended_at : 'Sin cierre detectado';
+            document.getElementById('edgeKpi').textContent = (j.learning && j.learning.semaforo) || 'N/D';
+            document.getElementById('edgeKpi').className = 'kpi ' + (((j.learning||{}).semaforo === 'VERDE') ? 'ok' : (((j.learning||{}).semaforo === 'AMARILLO') ? 'warn' : 'bad'));
+            document.getElementById('edgeMeta').textContent = j.learning ? `Win rate ${j.learning.win_rate ?? '-'}% · Expectancy ${j.learning.expectancy_usd ?? '-'} USD` : 'Sin learning status';
+            document.getElementById('champKpi').textContent = String((j.registry_rows||[]).length || 0);
+            document.getElementById('champMeta').textContent = 'Modelos champion monitorizados';
+            const summary = j.training
+              ? 'El modelo está entrenando ahora mismo. La prioridad es dejarlo terminar y mirar si el cierre acaba limpio.'
+              : ((j.learning||{}).semaforo === 'VERDE'
+                ? 'La lectura actual es positiva: el edge reciente acompaña y el LSTM no parece estar estropeando la base.'
+                : ((j.learning||{}).semaforo === 'AMARILLO'
+                  ? 'La lectura actual es prudente: el sistema funciona, pero todavía está en una zona de validación y no de confianza total.'
+                  : 'La lectura actual pide cuidado: el bloque LSTM no está en una situación bonita y conviene revisarlo antes de confiar demasiado.'));
+            document.getElementById('humanSummary').textContent = summary;
+            document.getElementById('healthBadges').innerHTML = [
+              badge(`Trades 7d: ${(j.learning||{}).trades_7d ?? '-'}`, ''),
+              badge(`PnL 7d: ${(j.learning||{}).pnl_7d_usd ?? '-'} USD`, ''),
+              badge(`Max DD: ${(j.learning||{}).max_drawdown_usd ?? '-'} USD`, ''),
+              badge(`Lock: ${j.training ? 'activo' : 'libre'}`, j.training ? 'warn' : 'ok')
+            ].join(' ');
+            const modelRows = (j.registry_rows||[]).map(row => {
+              const cls = row.best_val_mse < 0.001 ? 'ok' : 'warn';
+              return `<tr><td>${row.symbol}</td><td>${row.best_val_mse}</td><td>${row.delta_text}</td><td><span class="${cls}">${row.reading}</span></td></tr>`;
+            }).join('');
+            document.getElementById('modelRows').innerHTML = modelRows || '<tr><td colspan="4">Sin modelos registrados.</td></tr>';
+            const wfRows = (j.walkforward||[]).map(row => {
+              const cls = row.delta > 0 ? 'ok' : (row.delta === 0 ? 'warn' : 'bad');
+              const verdict = row.delta > 0 ? 'Mejora sobre la base' : 'No mejora todavía';
+              return `<tr><td>${row.symbol}</td><td>${row.baseline_acc}</td><td>${row.lstm_acc}</td><td><span class="${cls}">${row.delta > 0 ? '+' : ''}${row.delta}</span></td><td>${verdict}</td></tr>`;
+            }).join('');
+            document.getElementById('wfRows').innerHTML = wfRows || '<tr><td colspan="5">Sin comparativa walk-forward.</td></tr>';
             document.getElementById('log').textContent = j.log_tail || '(sin log disponible)';
           } catch(e) {
             document.getElementById('log').textContent = 'Error cargando datos: ' + e;
@@ -1521,12 +1613,30 @@ def lstm_real_status():
     if log_tail:
         for m in re.finditer(r"\[(?P<ts>[^\]]+)\]\s+END\s+exit=(?P<exit>-?\d+)", log_tail):
             last_end = {"ended_at": m.group("ts"), "exit": int(m.group("exit"))}
+    registry = _json_or(LSTM_REGISTRY, {"symbols": {}})
+    learning = _json_or(LSTM_LEARNING_STATUS, {})
+    walkforward = _walkforward_rows()
+    registry_rows = []
+    for symbol, payload in (registry.get("symbols") or {}).items():
+        best = payload.get("best_val_mse")
+        wf = next((r for r in walkforward if r.get("symbol") == symbol), None)
+        delta_text = f"{wf['lstm_acc']} vs {wf['baseline_acc']}" if wf else "Sin walk-forward"
+        reading = "Fino" if isinstance(best, (int, float)) and best < 0.001 else "Aceptable"
+        registry_rows.append({
+            "symbol": symbol,
+            "best_val_mse": best,
+            "delta_text": delta_text,
+            "reading": reading,
+        })
     return {
         "ok": True,
         "training": LSTM_LOCK.exists(),
         "log_path": str(LSTM_LOG),
         "last_end": last_end,
         "log_tail": log_tail,
+        "learning": learning,
+        "walkforward": walkforward,
+        "registry_rows": registry_rows,
     }
 # ===== END_LSTM_REAL_SAFE =====
 
