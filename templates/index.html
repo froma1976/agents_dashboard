@@ -1199,6 +1199,37 @@
           </tr>{% endif %}
         </table>
       </div>
+
+      <div class="card col-12">
+        <h2>Historial unificado de órdenes cerradas</h2>
+        <table>
+          <tr>
+            <th>Mercado</th>
+            <th>Ticker</th>
+            <th>Entrada</th>
+            <th>Salida</th>
+            <th>Resultado</th>
+            <th>PnL USD</th>
+            <th>Apertura</th>
+            <th>Cierre</th>
+          </tr>
+          {% for o in unified_completed_orders %}
+          <tr>
+            <td><span class="badge {{ 'ok' if o.market == 'Cripto' else 'warn' }}">{{ o.market }}</span></td>
+            <td>{{ o.ticker or '-' }}</td>
+            <td>{{ o.entry_price if o.entry_price is not none else '-' }}</td>
+            <td>{{ o.exit_price if o.exit_price is not none else '-' }}</td>
+            <td><span class="badge {{ 'ok' if o.result == 'ganada' else ('warn' if o.result in ['timeout','neutral'] else 'no') }}">{{ o.result or '-' }}</span></td>
+            <td><span class="badge {{ 'ok' if (o.pnl_usd or 0) >= 0 else 'no' }}">{{ o.pnl_usd if o.pnl_usd is not none else '-' }}</span></td>
+            <td>{{ o.opened_at or '-' }}</td>
+            <td>{{ o.closed_at or '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if unified_completed_orders|length == 0 %}<tr>
+            <td colspan="8">Todavía no hay órdenes cerradas en el historial unificado.</td>
+          </tr>{% endif %}
+        </table>
+      </div>
     </div>
 
     <div class="grid tab-section" data-tab="fuentes">

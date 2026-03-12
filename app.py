@@ -1363,6 +1363,33 @@ def home(request: Request):
             o["pct_move"] = None
             o["pnl_usd_est"] = None
 
+    unified_completed_orders = []
+    for o in completed_orders:
+        unified_completed_orders.append({
+            "market": "Cartera",
+            "ticker": o.get("ticker"),
+            "entry_price": o.get("entry_price"),
+            "exit_price": o.get("close_price") or o.get("exit_price"),
+            "result": o.get("result"),
+            "pnl_usd": o.get("pnl_usd") if o.get("pnl_usd") is not None else o.get("pnl_usd_est"),
+            "opened_at": o.get("created_at") or o.get("opened_at"),
+            "closed_at": o.get("closed_at"),
+        })
+    for o in crypto_completed:
+        unified_completed_orders.append({
+            "market": "Cripto",
+            "ticker": o.get("ticker"),
+            "entry_price": o.get("entry_price"),
+            "exit_price": o.get("close_price") or o.get("exit_price"),
+            "result": o.get("result"),
+            "pnl_usd": o.get("pnl_usd"),
+            "opened_at": o.get("opened_at"),
+            "closed_at": o.get("closed_at"),
+        })
+    def _sort_key(row):
+        return str(row.get("closed_at") or row.get("opened_at") or "")
+    unified_completed_orders = sorted(unified_completed_orders, key=_sort_key, reverse=True)
+
     quant_data = []
     quant_path = Path(os.getenv("PRICE_WAREHOUSE_PATH", "C:/Users/Fernando/.openclaw/workspace/memory/price_warehouse.csv"))
     try:
@@ -1441,6 +1468,7 @@ def home(request: Request):
             "orders_pending": pre_entry_orders,
             "orders_active": active_orders,
             "orders_completed": completed_orders,
+            "unified_completed_orders": unified_completed_orders[:40],
             "quant_data": quant_data[:100],
             "stock_quant_data": stock_quant_data[:100],
             "rag_journal": rag_journal[:50],
