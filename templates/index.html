@@ -1537,6 +1537,7 @@
             <th>24h</th>
             <th>7d</th>
             <th>Score</th>
+            <th>Edge</th>
             <th>Gem score</th>
             <th>Espías</th>
             <th>Rugcheck</th>
@@ -1556,6 +1557,7 @@
             <td><span class="badge {{ 'ok' if c.chg_24h_pct >= 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
             <td><span class="badge {{ 'ok' if c.chg_7d_pct >= 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
             <td>{{ c.score }}</td>
+            <td><span class="badge {{ 'ok' if (c.trade_edge_delta or 0) > 0 else ('warn' if (c.trade_edge_delta or 0) == 0 else 'no') }}">{{ c.trade_edge_score or 0 }} / {{ c.trade_edge_delta or 0 }}</span></td>
             <td><span
                 class="badge {{ 'ok' if (c.gem_score or 0) >= 75 else ('warn' if (c.gem_score or 0) >= 65 else 'no') }}">{{
                 c.gem_score or 0 }}</span></td>
@@ -1577,7 +1579,7 @@
           {% endfor %}
           {% if crypto_signals.top_opportunities is not defined or crypto_signals.top_opportunities|length == 0 %}
           <tr>
-            <td colspan="15">Sin datos cripto todavía (ejecuta ingest cripto).</td>
+            <td colspan="16">Sin datos cripto todavía (ejecuta ingest cripto).</td>
           </tr>
           {% endif %}
         </table>
