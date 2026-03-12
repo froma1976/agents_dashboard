@@ -1382,26 +1382,45 @@
 
       <div class="card col-12">
         <h2>Research Engine</h2>
-        <p class="muted">Deployments activos: {% for d in (research_panel.deployments.get('deployments', []) if
-          research_panel.deployments else []) %}<span class="badge ok">{{ d.module }}: {{ d.deployment_key }}</span> {%
-          else %}Ninguno{% endfor %}</p>
+        <p class="muted">Aquí ves qué mejoras está probando el sistema para aprender a operar mejor y cuáles ya se han aplicado de verdad.</p>
+        <p class="muted">Mejoras activas: {% for d in (research_panel.deployments.get('deployments', []) if
+          research_panel.deployments else []) %}<span class="badge ok">{{ d.module }}: {{ d.deployment_key }}={{ d.deployment_value }}</span> {%
+          else %}Ninguna aplicada todavía{% endfor %}</p>
         <table>
           <tr>
-            <th>Experimento</th>
-            <th>Módulo</th>
-            <th>Decisión</th>
-            <th>Estado candidato</th>
-            <th>Motivo</th>
+            <th>Prueba</th>
+            <th>Área</th>
+            <th>Qué pasó</th>
+            <th>Situación</th>
+            <th>Lectura humana</th>
           </tr>
           {% for item in (research_panel.queue.get('items', []) if research_panel.queue else [])[:6] %}
           <tr>
             <td>{{ item.name }}</td>
             <td>{{ item.target_module }}</td>
-            <td><span
-                class="badge {{ 'ok' if item.decision == 'promote' else ('warn' if item.decision == 'hold' else 'no') }}">{{
-                item.decision or '-' }}</span></td>
-            <td>{{ item.candidate_status or item.status or '-' }}</td>
-            <td>{{ item.rationale or '-' }}</td>
+            <td>
+              {% if item.decision == 'promote' %}
+              <span class="badge ok">MEJORA VÁLIDA</span>
+              {% elif item.decision == 'discard' %}
+              <span class="badge no">NO MEJORA</span>
+              {% elif item.decision == 'hold' %}
+              <span class="badge warn">SEGUIR MIRANDO</span>
+              {% else %}
+              <span class="badge warn">PENDIENTE</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.candidate_status == 'promoted' %}
+              <span class="badge ok">YA APLICADA</span>
+              {% elif item.candidate_status == 'discarded' %}
+              <span class="badge no">DESCARTADA</span>
+              {% elif item.status == 'pending' %}
+              <span class="badge warn">EN COLA</span>
+              {% else %}
+              <span class="badge warn">{{ item.candidate_status or item.status or '-' }}</span>
+              {% endif %}
+            </td>
+            <td>{{ item.rationale or item.automation_plan or 'El sistema todavía no ha explicado esta prueba.' }}</td>
           </tr>
           {% endfor %}
         </table>
