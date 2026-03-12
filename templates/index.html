@@ -599,6 +599,192 @@
       border-style: dashed
     }
 
+    .office-v2-shell {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #2f4365;
+      border-radius: 20px;
+      background:
+        radial-gradient(circle at top right, rgba(45, 212, 191, .10), transparent 24%),
+        linear-gradient(180deg, #0a0f17, #0b1420 62%, #091018);
+      padding: 16px
+    }
+
+    .office-v2-switch {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 14px
+    }
+
+    .office-v2-chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #304766;
+      background: #0f1826;
+      color: #c5d4eb;
+      font-size: 12px
+    }
+
+    .office-v2-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(320px, .9fr);
+      gap: 16px
+    }
+
+    .office-v2-map {
+      position: relative;
+      min-height: 560px;
+      border-radius: 18px;
+      border: 1px solid #35537e;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px),
+        linear-gradient(180deg, #121d2d, #0b1320);
+      background-size: 28px 28px, 28px 28px, auto;
+      overflow: hidden
+    }
+
+    .office-v2-map:before {
+      content: '';
+      position: absolute;
+      inset: 16px;
+      border-radius: 14px;
+      border: 2px solid rgba(164, 194, 255, .18);
+      pointer-events: none
+    }
+
+    .office-v2-room {
+      position: absolute;
+      border: 2px solid #7fa1cf;
+      border-radius: 14px;
+      background: rgba(9, 17, 30, .88);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04)
+    }
+
+    .office-v2-room .title {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      font-size: 12px;
+      color: #d9e8ff;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase
+    }
+
+    .office-v2-room .sub {
+      position: absolute;
+      top: 28px;
+      left: 12px;
+      right: 12px;
+      font-size: 11px;
+      color: #8ca6cf;
+      line-height: 1.35
+    }
+
+    .office-v2-room.conclave {
+      border-color: #55a36b;
+      background: rgba(12, 28, 18, .90)
+    }
+
+    .office-v2-hall {
+      position: absolute;
+      background: rgba(151, 177, 217, .10);
+      border: 1px dashed rgba(151, 177, 217, .22);
+      border-radius: 999px
+    }
+
+    .office-v2-agent {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      margin-left: -8px;
+      margin-top: -8px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, .55);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, .04), 0 8px 16px rgba(0, 0, 0, .28);
+      transition: transform .25s ease;
+      z-index: 5
+    }
+
+    .office-v2-agent:after {
+      content: attr(data-short);
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: #d9e7fb;
+      white-space: nowrap;
+      letter-spacing: .04em
+    }
+
+    .office-v2-agent.transit {
+      transform: scale(1.15)
+    }
+
+    .office-v2-agent.conclave {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, .12), 0 10px 20px rgba(0, 0, 0, .3)
+    }
+
+    .office-v2-side {
+      display: grid;
+      gap: 14px
+    }
+
+    .office-v2-panel {
+      border: 1px solid #314866;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #0d1624, #0a111b);
+      padding: 14px
+    }
+
+    .office-v2-panel h3 {
+      margin: 0 0 8px;
+      font-size: 15px
+    }
+
+    .office-v2-feed {
+      display: grid;
+      gap: 10px;
+      max-height: 250px;
+      overflow: auto
+    }
+
+    .office-v2-line {
+      border: 1px solid #2d415b;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, #111b2b, #0f1723)
+    }
+
+    .office-v2-line strong {
+      color: #ecf4ff
+    }
+
+    .office-v2-line.decision {
+      border-color: #4a8c5c;
+      background: linear-gradient(180deg, #13241a, #0f1b14)
+    }
+
+    .office-v2-line.challenge {
+      border-color: #7c4c4c;
+      background: linear-gradient(180deg, #241618, #171012)
+    }
+
+    .office-v2-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px
+    }
+
+    @media (max-width: 980px) {
+      .office-v2-grid { grid-template-columns: 1fr; }
+      .office-v2-map { min-height: 520px; }
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -1637,6 +1823,48 @@
         </div>
         <div id="agentChatLog" class="chat-log"></div>
       </div>
+
+      <div class="card col-12">
+        <h2>🏢 Oficina v2 beta</h2>
+        <p class="muted">Versión nueva: plano de oficina con agentes moviéndose por pasillos y charlas de curro más naturales. La antigua sigue arriba para comparar.</p>
+        <div class="office-v2-switch">
+          <span class="office-v2-chip">Plano vivo</span>
+          <span class="office-v2-chip">Movimiento por pasillos</span>
+          <span class="office-v2-chip">Conversación coloquial</span>
+          <span class="office-v2-chip">Beta paralela</span>
+        </div>
+        <div class="office-v2-shell">
+          <div class="office-v2-grid">
+            <div class="office-v2-map" id="officeV2Map">
+              <div class="office-v2-room" style="left:4%;top:6%;width:24%;height:20%;"><div class="title">Macro</div><div class="sub">Marta vigila viento global, liquidez y tono general.</div></div>
+              <div class="office-v2-room" style="left:31%;top:6%;width:24%;height:20%;"><div class="title">Catalizadores</div><div class="sub">Nora revisa titulares, catalizadores y narrative shifts.</div></div>
+              <div class="office-v2-room" style="left:58%;top:6%;width:18%;height:20%;"><div class="title">Técnico</div><div class="sub">Teo mira estructura, volumen y timing.</div></div>
+              <div class="office-v2-room" style="left:79%;top:6%;width:17%;height:20%;"><div class="title">Riesgo</div><div class="sub">Rafa pone freno, tamaño y disciplina.</div></div>
+              <div class="office-v2-room" style="left:4%;top:39%;width:19%;height:18%;"><div class="title">Abogado</div><div class="sub">Diego busca la grieta de la tesis.</div></div>
+              <div class="office-v2-room" style="left:4%;top:63%;width:19%;height:18%;"><div class="title">Scout</div><div class="sub">Alex coordina el flujo y cierra prioridades.</div></div>
+              <div class="office-v2-room" style="left:79%;top:39%;width:17%;height:18%;"><div class="title">Consejo</div><div class="sub">Gaia entra solo si el caso es delicado.</div></div>
+              <div class="office-v2-room conclave" style="left:28%;top:34%;width:46%;height:34%;"><div class="title">Cónclave</div><div class="sub">Aquí se cruzan pros, objeciones y decisión final.</div></div>
+              <div class="office-v2-room" style="left:26%;top:74%;width:15%;height:16%;"><div class="title">News Spy</div><div class="sub">Nico escucha ruido cripto.</div></div>
+              <div class="office-v2-room" style="left:43%;top:74%;width:15%;height:16%;"><div class="title">Flow Spy</div><div class="sub">Flux sigue aceleración y flujo.</div></div>
+              <div class="office-v2-room" style="left:60%;top:74%;width:15%;height:16%;"><div class="title">Trade Pod</div><div class="sub">Cora, Bolt y Rex afinan entrada o no entrada.</div></div>
+              <div class="office-v2-hall" style="left:24%;top:45%;width:54%;height:8%;"></div>
+              <div class="office-v2-hall" style="left:49%;top:22%;width:6%;height:52%;"></div>
+              <div id="officeV2Agents"></div>
+            </div>
+            <div class="office-v2-side">
+              <div class="office-v2-panel">
+                <h3>Resumen del turno</h3>
+                <div id="officeV2Summary" class="muted">Preparando resumen...</div>
+                <div id="officeV2Badges" class="office-v2-badges"></div>
+              </div>
+              <div class="office-v2-panel">
+                <h3>Radio de oficina</h3>
+                <div id="officeV2Feed" class="office-v2-feed"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="grid tab-section" data-tab="lstm">
@@ -2452,6 +2680,176 @@
         logEl.innerHTML = lines.join('');
       }
     }) ();
+
+    (function () {
+      const map = document.getElementById('officeV2Map');
+      const agentsRoot = document.getElementById('officeV2Agents');
+      const feed = document.getElementById('officeV2Feed');
+      const summary = document.getElementById('officeV2Summary');
+      const badges = document.getElementById('officeV2Badges');
+      if (!map || !agentsRoot || !feed || !summary || !badges) return;
+
+      const agents = {{ agents_runtime|tojson }};
+      const live = {{ agent_live|tojson }};
+      const topOps = {{ (signals.top_opportunities if signals.top_opportunities is defined else [])|tojson }};
+      const tradeOps = {{ (crypto_signals.top_opportunities if crypto_signals.top_opportunities is defined else [])|tojson }};
+      const top = topOps[0] || null;
+      const tradeTop = tradeOps[0] || null;
+
+      const names = {
+        'alpha-scout': 'Alex',
+        'macro-agent': 'Marta',
+        'news-catalyst-agent': 'Nora',
+        'technical-agent': 'Teo',
+        'risk-exec-agent': 'Rafa',
+        'devil-advocate-agent': 'Diego',
+        'local-council-agent': 'Gaia',
+        'crypto-news-spy-agent': 'Nico',
+        'crypto-euphoria-spy-agent': 'Eva',
+        'crypto-flow-spy-agent': 'Flux',
+        'crypto-whale-spy-agent': 'Wally',
+        'crypto-execution-agent': 'Rex',
+        'crypto-chart-agent': 'Cora',
+        'crypto-breakout-agent': 'Bolt',
+      };
+
+      const colors = {
+        'macro-agent': '#60a5fa',
+        'news-catalyst-agent': '#f59e0b',
+        'technical-agent': '#a78bfa',
+        'risk-exec-agent': '#f87171',
+        'devil-advocate-agent': '#fb7185',
+        'alpha-scout': '#34d399',
+        'local-council-agent': '#fde68a',
+        'crypto-news-spy-agent': '#38bdf8',
+        'crypto-euphoria-spy-agent': '#f472b6',
+        'crypto-flow-spy-agent': '#22d3ee',
+        'crypto-whale-spy-agent': '#818cf8',
+        'crypto-execution-agent': '#fb7185',
+        'crypto-chart-agent': '#2dd4bf',
+        'crypto-breakout-agent': '#f97316',
+      };
+
+      const points = {
+        macro: { x: 160, y: 105 },
+        news: { x: 360, y: 105 },
+        technical: { x: 560, y: 105 },
+        risk: { x: 735, y: 105 },
+        devil: { x: 135, y: 270 },
+        alpha: { x: 135, y: 405 },
+        council: { x: 735, y: 270 },
+        conclave: { x: 455, y: 300 },
+        newsSpy: { x: 290, y: 500 },
+        flowSpy: { x: 430, y: 500 },
+        tradePod: { x: 585, y: 500 },
+        hallWest: { x: 250, y: 300 },
+        hallEast: { x: 655, y: 300 },
+      };
+
+      const roomFor = {
+        'macro-agent': 'macro',
+        'news-catalyst-agent': 'news',
+        'technical-agent': 'technical',
+        'risk-exec-agent': 'risk',
+        'devil-advocate-agent': 'devil',
+        'alpha-scout': 'alpha',
+        'local-council-agent': 'council',
+        'crypto-news-spy-agent': 'newsSpy',
+        'crypto-euphoria-spy-agent': 'newsSpy',
+        'crypto-flow-spy-agent': 'flowSpy',
+        'crypto-whale-spy-agent': 'flowSpy',
+        'crypto-execution-agent': 'tradePod',
+        'crypto-chart-agent': 'tradePod',
+        'crypto-breakout-agent': 'tradePod',
+      };
+
+      const conclaveSet = new Set(['alpha-scout']);
+      if (top) {
+        if ((top.score_macro_adj ?? 0) !== 0 || (top.reasons || []).some(r => String(r).includes('macro'))) conclaveSet.add('macro-agent');
+        if ((top.catalyst_score ?? 0) > 0 || (top.fundamental_inflection_score ?? 0) > 0) conclaveSet.add('news-catalyst-agent');
+        if ((top.score_tech ?? 0) >= 45 || top.breakout_20 || (top.rel_volume ?? 0) >= 1.1) conclaveSet.add('technical-agent');
+        if ((top.argumento_en_contra || '').toLowerCase() !== 'sin objeción crítica detectada') conclaveSet.add('devil-advocate-agent');
+        if ((top.state === 'READY' || top.state === 'TRIGGERED') || (top.decision_final && top.decision_final !== 'BUY')) conclaveSet.add('risk-exec-agent');
+        const conf = Number(top.confidence_pct ?? top.score_final ?? 0);
+        if (((top.state === 'READY' || top.state === 'TRIGGERED') && conf >= 75) || top.decision_final === 'AVOID') conclaveSet.add('local-council-agent');
+      }
+
+      const transitSet = new Set();
+      (live || []).forEach(row => {
+        const txt = String(row.text || '').toLowerCase();
+        if (txt.includes('consenso') || txt.includes('conclave') || txt.includes('envi')) transitSet.add(row.agent);
+      });
+
+      const templates = [];
+      if (top) {
+        const target = top.ticker || 'la idea del día';
+        templates.push({ who: 'Marta', text: (top.score_macro_adj ?? 0) >= 0 ? `Yo no estoy viendo un macro que mate ${target}. Se puede estudiar sin dramatizar.` : `Ojo, el macro aprieta y no me entusiasma abrir ${target} con alegría.`, cls: '' });
+        templates.push({ who: 'Nora', text: `En noticias la conversación con ${target} no está muerta. Hay tema encima de la mesa y se nota en el runbook.`, cls: '' });
+        templates.push({ who: 'Teo', text: `La estructura de ${target} no está fea, pero quiero que el volumen deje de hacerse el interesante y confirme de verdad.`, cls: '' });
+        templates.push({ who: 'Diego', text: top.argumento_en_contra || `A mí esto me sigue oliendo a entrada precipitada si nadie me demuestra que el timing está maduro.`, cls: 'challenge' });
+        templates.push({ who: 'Rafa', text: `Por riesgo no me vuelvo loco. Si entramos, tamaño corto y sin postureo.`, cls: '' });
+        if (tradeTop) templates.push({ who: 'Nico', text: `En cripto el run de ${tradeTop.ticker} sale ${tradeTop.research_sentiment || 'mixto'}. No es para casarse, pero tampoco para ignorarlo.`, cls: '' });
+        if (conclaveSet.has('local-council-agent')) templates.push({ who: 'Gaia', text: `Me meto porque este caso puede acabar en compra o en frenazo serio. Mejor arbitrar ahora que corregir luego.`, cls: 'challenge' });
+        templates.push({ who: 'Alex', text: `Vale, cerramos: ${target} se queda en ${top.state || 'WATCH'} con decisión ${top.decision_final || 'HOLD'}. Nadie compra por impulso hoy.`, cls: 'decision' });
+      } else {
+        templates.push({ who: 'Alex', text: 'No hay una tesis clara encima de la mesa. La oficina sigue currando, pero sin forzar trades por aburrimiento.', cls: 'decision' });
+      }
+      (live || []).slice(0, 4).forEach((row, idx) => {
+        templates.push({ who: names[row.agent] || row.agent, text: String(row.text || 'Sin novedad fuerte.').replace(/^.*?:\s*/, '') || 'Sin novedad fuerte.', cls: idx % 2 ? '' : 'thought' });
+      });
+
+      summary.textContent = top ? `Turno centrado en ${top.ticker}. ${conclaveSet.size} personas han pasado hoy por la sala de decisión y el motor cruza lectura macro, técnica, riesgo y research antes de mover un euro.` : 'Turno tranquilo. La oficina sigue patrullando el mercado sin abrir nada por ansiedad.';
+      badges.innerHTML = [
+        `<span class="badge ok">Despachos activos: ${agents.length}</span>`,
+        `<span class="badge warn">En tránsito: ${transitSet.size}</span>`,
+        `<span class="badge ${conclaveSet.size > 3 ? 'ok' : 'warn'}">En cónclave: ${conclaveSet.size}</span>`,
+        `<span class="badge ${top && top.decision_final === 'BUY' ? 'ok' : 'no'}">Decisión: ${top ? top.decision_final : 'HOLD'}</span>`
+      ].join('');
+
+      feed.innerHTML = templates.map(row => `<div class="office-v2-line ${row.cls || ''}"><strong>${row.who}</strong><div>${row.text}</div></div>`).join('');
+
+      const agentDots = [];
+      agents.forEach((agent, idx) => {
+        const el = document.createElement('div');
+        el.className = 'office-v2-agent';
+        if (transitSet.has(agent.id)) el.classList.add('transit');
+        if (conclaveSet.has(agent.id)) el.classList.add('conclave');
+        el.dataset.short = (names[agent.id] || agent.id).slice(0, 2).toUpperCase();
+        el.style.background = colors[agent.id] || '#93c5fd';
+        agentsRoot.appendChild(el);
+
+        const base = points[roomFor[agent.id]] || points.alpha;
+        const hallway = base.x < points.conclave.x ? points.hallWest : points.hallEast;
+        const path = conclaveSet.has(agent.id)
+          ? [base, hallway, points.conclave]
+          : [base, { x: base.x + ((idx % 3) - 1) * 18, y: base.y + ((idx % 4) - 1) * 12 }];
+        agentDots.push({ el, path, seed: idx * 0.17, speed: 0.18 + (idx % 5) * 0.03, looping: !conclaveSet.has(agent.id) });
+      });
+
+      const posOnPath = (path, t, looping) => {
+        if (path.length === 1) return path[0];
+        const phase = looping ? (Math.sin(t) + 1) / 2 : Math.min(1, t / 1.2);
+        const seg = phase * (path.length - 1);
+        const idx = Math.min(path.length - 2, Math.floor(seg));
+        const local = seg - idx;
+        const a = path[idx];
+        const b = path[idx + 1];
+        return { x: a.x + (b.x - a.x) * local, y: a.y + (b.y - a.y) * local };
+      };
+
+      let start = null;
+      const tick = ts => {
+        if (!start) start = ts;
+        const t = (ts - start) / 1000;
+        agentDots.forEach(dot => {
+          const p = posOnPath(dot.path, t * dot.speed + dot.seed, dot.looping);
+          dot.el.style.left = `${p.x}px`;
+          dot.el.style.top = `${p.y}px`;
+        });
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    })();
 
     async function openAnalysis(ticker) {
       const modal = document.getElementById('analysisModal');
