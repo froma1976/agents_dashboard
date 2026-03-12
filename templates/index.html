@@ -8,16 +8,20 @@
   <link rel="icon" type="image/png" href="/static/favicon.png">
   <style>
     :root {
-      --bg: #070b14;
-      --panel: #111827cc;
-      --line: #26324d;
-      --txt: #eaf0ff;
-      --muted: #93a4c9;
-      --ok: #22c55e;
+      --bg: #030712;
+      --panel: rgba(17, 24, 39, 0.7);
+      --line: rgba(255, 255, 255, 0.1);
+      --txt: #f3f4f6;
+      --muted: #9ca3af;
+      --ok: #10b981;
       --warn: #f59e0b;
-      --run: #38bdf8;
+      --run: #0ea5e9;
       --bad: #ef4444;
-      --off: #94a3b8;
+      --off: #6b7280;
+      --primary: #00f2fe;
+      --secondary: #4facfe;
+      --font-main: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * {
@@ -27,29 +31,40 @@
     body {
       margin: 0;
       color: var(--txt);
-      font-family: Inter, Segoe UI, Arial, sans-serif;
-      background: radial-gradient(1200px 500px at 10% -10%, #1d2e5c 0%, transparent 60%),
-        radial-gradient(900px 400px at 90% -20%, #153d4a 0%, transparent 55%),
+      font-family: var(--font-main);
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 10% 0%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, rgba(79, 172, 254, 0.08) 0%, transparent 40%),
         var(--bg);
+      background-attachment: fixed;
+      min-height: 100vh;
     }
 
     .wrap {
-      max-width: 1280px;
-      margin: 24px auto;
-      padding: 0 16px
+      max-width: 1400px;
+      margin: 32px auto;
+      padding: 0 24px
     }
 
     .top {
       display: flex;
-      align-items: end;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px
+      gap: 20px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
     }
 
     h1 {
       margin: 0;
-      font-size: 28px
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(90deg, #fff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .muted {
@@ -64,29 +79,52 @@
 
     .card {
       background: var(--panel);
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      box-shadow: 0 10px 30px #00000033
+      border-radius: 20px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     }
 
     .kpi {
       display: flex;
       flex-direction: column;
-      gap: 6px
+      gap: 8px
     }
 
     .kpi .v {
-      font-size: 28px;
-      font-weight: 700
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 500;
+      letter-spacing: -1px;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
     }
 
     .kpi .l {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: .08em
+      font-weight: 600;
+      letter-spacing: 0.1em
     }
 
     .col-3 {
@@ -1344,7 +1382,9 @@
 
       <div class="card col-12">
         <h2>Research Engine</h2>
-        <p class="muted">Deployments activos: {% for d in (research_panel.deployments.get('deployments', []) if research_panel.deployments else []) %}<span class="badge ok">{{ d.module }}: {{ d.deployment_key }}</span> {% else %}Ninguno{% endfor %}</p>
+        <p class="muted">Deployments activos: {% for d in (research_panel.deployments.get('deployments', []) if
+          research_panel.deployments else []) %}<span class="badge ok">{{ d.module }}: {{ d.deployment_key }}</span> {%
+          else %}Ninguno{% endfor %}</p>
         <table>
           <tr>
             <th>Experimento</th>
@@ -1357,7 +1397,9 @@
           <tr>
             <td>{{ item.name }}</td>
             <td>{{ item.target_module }}</td>
-            <td><span class="badge {{ 'ok' if item.decision == 'promote' else ('warn' if item.decision == 'hold' else 'no') }}">{{ item.decision or '-' }}</span></td>
+            <td><span
+                class="badge {{ 'ok' if item.decision == 'promote' else ('warn' if item.decision == 'hold' else 'no') }}">{{
+                item.decision or '-' }}</span></td>
             <td>{{ item.candidate_status or item.status or '-' }}</td>
             <td>{{ item.rationale or '-' }}</td>
           </tr>
@@ -1547,83 +1589,98 @@
           <span class="legend-item">🟢 En cónclave</span>
         </div>
         <div class="office-stage">
-        <div class="office-map" id="officeMap">
-          <div class="room-box room-wide" id="room-macro">
-            <span class="room-pulse"></span><span class="room-name">Macro</span><span class="room-sub">Despacho 01</span>
-            <div class="room-desc">Aquí se analiza el contexto global: volatilidad, tipos y viento de mercado.</div>
-            <div class="room-agents" id="room-agents-macro-agent"></div>
+          <div class="office-map" id="officeMap">
+            <div class="room-box room-wide" id="room-macro">
+              <span class="room-pulse"></span><span class="room-name">Macro</span><span class="room-sub">Despacho
+                01</span>
+              <div class="room-desc">Aquí se analiza el contexto global: volatilidad, tipos y viento de mercado.</div>
+              <div class="room-agents" id="room-agents-macro-agent"></div>
+            </div>
+            <div class="room-box room-wide" id="room-news">
+              <span class="room-pulse"></span><span class="room-name">Noticias y catalizadores</span><span
+                class="room-sub">Despacho 02</span>
+              <div class="room-desc">Aquí se detectan noticias relevantes y eventos que pueden mover el precio.</div>
+              <div class="room-agents" id="room-agents-news-catalyst-agent"></div>
+            </div>
+            <div class="room-box room-wide" id="room-technical">
+              <span class="room-pulse"></span><span class="room-name">Técnico</span><span class="room-sub">Despacho
+                03</span>
+              <div class="room-desc">Aquí se revisan tendencia, volumen, ruptura y estructura del gráfico.</div>
+              <div class="room-agents" id="room-agents-technical-agent"></div>
+            </div>
+            <div class="room-box" id="room-risk">
+              <span class="room-pulse"></span><span class="room-name">Riesgo y ejecución</span><span
+                class="room-sub">Control Desk</span>
+              <div class="room-desc">Aquí se valida exposición, stop/target y disciplina operativa.</div>
+              <div class="room-agents" id="room-agents-risk-exec-agent"></div>
+            </div>
+            <div class="room-box" id="room-devil">
+              <span class="room-pulse"></span><span class="room-name">Abogado del Diablo</span><span
+                class="room-sub">Audit Room</span>
+              <div class="room-desc">Aquí se atacan las tesis para evitar compras por euforia o sesgo.</div>
+              <div class="room-agents" id="room-agents-devil-advocate-agent"></div>
+            </div>
+            <div class="room-box" id="room-alpha">
+              <span class="room-pulse"></span><span class="room-name">Alpha Scout</span><span
+                class="room-sub">Orchestrator</span>
+              <div class="room-desc">Aquí se orquesta todo y se decide qué pasa a WATCH/READY/TRIGGERED.</div>
+              <div class="room-agents" id="room-agents-alpha-scout"></div>
+            </div>
+            <div class="room-box" id="room-local-council">
+              <span class="room-pulse"></span><span class="room-name">Consejo Local (Qwen3)</span><span
+                class="room-sub">Arbitraje</span>
+              <div class="room-desc">Aquí entra solo en casos críticos para arbitrar la decisión final en local.</div>
+              <div class="room-agents" id="room-agents-local-council-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-news">
+              <span class="room-pulse"></span><span class="room-name">Espía cripto: noticias</span><span
+                class="room-sub">Crypto Cell</span>
+              <div class="room-desc">Rastrea titulares y catalizadores del ecosistema cripto.</div>
+              <div class="room-agents" id="room-agents-crypto-news-spy-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-euphoria">
+              <span class="room-pulse"></span><span class="room-name">Espía cripto: euforia</span><span
+                class="room-sub">Crypto Cell</span>
+              <div class="room-desc">Detecta hype extremo, FOMO y riesgo de reversión.</div>
+              <div class="room-agents" id="room-agents-crypto-euphoria-spy-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-flow">
+              <span class="room-pulse"></span><span class="room-name">Espía cripto: flujo</span><span
+                class="room-sub">Crypto Cell</span>
+              <div class="room-desc">Vigila volumen y aceleración para entrada/salida rápida.</div>
+              <div class="room-agents" id="room-agents-crypto-flow-spy-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-whale">
+              <span class="room-pulse"></span><span class="room-name">Espía cripto: ballenas</span><span
+                class="room-sub">Crypto Cell</span>
+              <div class="room-desc">Marca anomalías de posibles manos fuertes.</div>
+              <div class="room-agents" id="room-agents-crypto-whale-spy-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-exec">
+              <span class="room-pulse"></span><span class="room-name">Ejecución cripto rápida</span><span
+                class="room-sub">Trade Pod</span>
+              <div class="room-desc">Lanza y cierra scalps en ventanas de segundos/minutos.</div>
+              <div class="room-agents" id="room-agents-crypto-execution-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-chart">
+              <span class="room-pulse"></span><span class="room-name">Analista de velas cripto</span><span
+                class="room-sub">Trade Pod</span>
+              <div class="room-desc">Lee velas 1m/5m para confirmar si entramos o evitamos.</div>
+              <div class="room-agents" id="room-agents-crypto-chart-agent"></div>
+            </div>
+            <div class="room-box" id="room-crypto-breakout">
+              <span class="room-pulse"></span><span class="room-name">Cazador de ruptura temprana</span><span
+                class="room-sub">Trade Pod</span>
+              <div class="room-desc">Detecta subidas explosivas con volumen para entrar al inicio.</div>
+              <div class="room-agents" id="room-agents-crypto-breakout-agent"></div>
+            </div>
+            <div class="room-box conclave-room" id="room-conclave">
+              <span class="room-pulse"></span><span class="room-name">🧠 Cónclave</span><span class="room-sub">Decision
+                Chamber</span>
+              <div class="room-desc">Sala final: se juntan pros y contras para emitir HOLD / BUY / AVOID.</div>
+              <div class="room-agents" id="room-agents-conclave"></div>
+            </div>
           </div>
-          <div class="room-box room-wide" id="room-news">
-            <span class="room-pulse"></span><span class="room-name">Noticias y catalizadores</span><span class="room-sub">Despacho 02</span>
-            <div class="room-desc">Aquí se detectan noticias relevantes y eventos que pueden mover el precio.</div>
-            <div class="room-agents" id="room-agents-news-catalyst-agent"></div>
-          </div>
-          <div class="room-box room-wide" id="room-technical">
-            <span class="room-pulse"></span><span class="room-name">Técnico</span><span class="room-sub">Despacho 03</span>
-            <div class="room-desc">Aquí se revisan tendencia, volumen, ruptura y estructura del gráfico.</div>
-            <div class="room-agents" id="room-agents-technical-agent"></div>
-          </div>
-          <div class="room-box" id="room-risk">
-            <span class="room-pulse"></span><span class="room-name">Riesgo y ejecución</span><span class="room-sub">Control Desk</span>
-            <div class="room-desc">Aquí se valida exposición, stop/target y disciplina operativa.</div>
-            <div class="room-agents" id="room-agents-risk-exec-agent"></div>
-          </div>
-          <div class="room-box" id="room-devil">
-            <span class="room-pulse"></span><span class="room-name">Abogado del Diablo</span><span class="room-sub">Audit Room</span>
-            <div class="room-desc">Aquí se atacan las tesis para evitar compras por euforia o sesgo.</div>
-            <div class="room-agents" id="room-agents-devil-advocate-agent"></div>
-          </div>
-          <div class="room-box" id="room-alpha">
-            <span class="room-pulse"></span><span class="room-name">Alpha Scout</span><span class="room-sub">Orchestrator</span>
-            <div class="room-desc">Aquí se orquesta todo y se decide qué pasa a WATCH/READY/TRIGGERED.</div>
-            <div class="room-agents" id="room-agents-alpha-scout"></div>
-          </div>
-          <div class="room-box" id="room-local-council">
-            <span class="room-pulse"></span><span class="room-name">Consejo Local (Qwen3)</span><span class="room-sub">Arbitraje</span>
-            <div class="room-desc">Aquí entra solo en casos críticos para arbitrar la decisión final en local.</div>
-            <div class="room-agents" id="room-agents-local-council-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-news">
-            <span class="room-pulse"></span><span class="room-name">Espía cripto: noticias</span><span class="room-sub">Crypto Cell</span>
-            <div class="room-desc">Rastrea titulares y catalizadores del ecosistema cripto.</div>
-            <div class="room-agents" id="room-agents-crypto-news-spy-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-euphoria">
-            <span class="room-pulse"></span><span class="room-name">Espía cripto: euforia</span><span class="room-sub">Crypto Cell</span>
-            <div class="room-desc">Detecta hype extremo, FOMO y riesgo de reversión.</div>
-            <div class="room-agents" id="room-agents-crypto-euphoria-spy-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-flow">
-            <span class="room-pulse"></span><span class="room-name">Espía cripto: flujo</span><span class="room-sub">Crypto Cell</span>
-            <div class="room-desc">Vigila volumen y aceleración para entrada/salida rápida.</div>
-            <div class="room-agents" id="room-agents-crypto-flow-spy-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-whale">
-            <span class="room-pulse"></span><span class="room-name">Espía cripto: ballenas</span><span class="room-sub">Crypto Cell</span>
-            <div class="room-desc">Marca anomalías de posibles manos fuertes.</div>
-            <div class="room-agents" id="room-agents-crypto-whale-spy-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-exec">
-            <span class="room-pulse"></span><span class="room-name">Ejecución cripto rápida</span><span class="room-sub">Trade Pod</span>
-            <div class="room-desc">Lanza y cierra scalps en ventanas de segundos/minutos.</div>
-            <div class="room-agents" id="room-agents-crypto-execution-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-chart">
-            <span class="room-pulse"></span><span class="room-name">Analista de velas cripto</span><span class="room-sub">Trade Pod</span>
-            <div class="room-desc">Lee velas 1m/5m para confirmar si entramos o evitamos.</div>
-            <div class="room-agents" id="room-agents-crypto-chart-agent"></div>
-          </div>
-          <div class="room-box" id="room-crypto-breakout">
-            <span class="room-pulse"></span><span class="room-name">Cazador de ruptura temprana</span><span class="room-sub">Trade Pod</span>
-            <div class="room-desc">Detecta subidas explosivas con volumen para entrar al inicio.</div>
-            <div class="room-agents" id="room-agents-crypto-breakout-agent"></div>
-          </div>
-          <div class="room-box conclave-room" id="room-conclave">
-            <span class="room-pulse"></span><span class="room-name">🧠 Cónclave</span><span class="room-sub">Decision Chamber</span>
-            <div class="room-desc">Sala final: se juntan pros y contras para emitir HOLD / BUY / AVOID.</div>
-            <div class="room-agents" id="room-agents-conclave"></div>
-          </div>
-        </div>
         </div>
       </div>
 
@@ -2330,10 +2387,10 @@
     const hasConclave = Array.isArray(topOps) && topOps.length > 0;
 
     // Versión final: cónclave dinámico según evidencia real del top ticker
-      const top = (Array.isArray(topOps) && topOps.length) ? topOps[0] : null;
-      const tradeTop = ({{ (crypto_signals.top_opportunities if crypto_signals.top_opportunities is defined else [])|tojson }})[0] || null;
-      const inConclave = new Set();
-      if (top) {
+    const top = (Array.isArray(topOps) && topOps.length) ? topOps[0] : null;
+    const tradeTop = ({{ (crypto_signals.top_opportunities if crypto_signals.top_opportunities is defined else[])| tojson }})[0] || null;
+    const inConclave = new Set();
+    if (top) {
       inConclave.add('alpha-scout');
       if ((top.score_macro_adj ?? 0) !== 0 || (top.reasons || []).some(r => String(r).includes('macro'))) inConclave.add('macro-agent');
       if ((top.catalyst_score ?? 0) > 0 || (top.fundamental_inflection_score ?? 0) > 0) inConclave.add('news-catalyst-agent');
@@ -2392,19 +2449,19 @@
       'crypto-breakout-agent': 'room-agents-crypto-breakout-agent',
     };
 
-      agents.forEach((a) => {
-        const liveRow = (live || []).find(x => x.agent === a.id);
-        const txt = ((liveRow && liveRow.text) || '').toLowerCase();
-        const transit = txt.includes('envi') || txt.includes('consenso');
-        const conclave = inConclave.has(a.id);
-        const active = txt.includes('trabajando') || txt.includes('evaluando') || conclave;
+    agents.forEach((a) => {
+      const liveRow = (live || []).find(x => x.agent === a.id);
+      const txt = ((liveRow && liveRow.text) || '').toLowerCase();
+      const transit = txt.includes('envi') || txt.includes('consenso');
+      const conclave = inConclave.has(a.id);
+      const active = txt.includes('trabajando') || txt.includes('evaluando') || conclave;
 
-        const tag = document.createElement('div');
-        tag.className = 'agent-tag';
-        if (transit) tag.classList.add('in-transit');
-        if (conclave) tag.classList.add('in-conclave');
-        if (active) tag.classList.add('is-active');
-        tag.textContent = agentNames[a.id] || a.id;
+      const tag = document.createElement('div');
+      tag.className = 'agent-tag';
+      if (transit) tag.classList.add('in-transit');
+      if (conclave) tag.classList.add('in-conclave');
+      if (active) tag.classList.add('is-active');
+      tag.textContent = agentNames[a.id] || a.id;
 
       // Regla visual estricta: cada agente solo puede estar en UNA sala.
       // Prioridad: cónclave > sala base.
@@ -2419,39 +2476,39 @@
 
     // Log narrativo de conversaciones
     const logEl = document.getElementById('agentChatLog');
-      if (logEl) {
-        const lines = [];
-        const hhmm = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const say = (who, msg, cls='') => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg ${cls}"><strong>${who}:</strong> ${msg}</div></div>`);
-        const think = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg thought"><strong>${who}:</strong> ${msg}</div></div>`);
+    if (logEl) {
+      const lines = [];
+      const hhmm = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const say = (who, msg, cls = '') => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg ${cls}"><strong>${who}:</strong> ${msg}</div></div>`);
+      const think = (who, msg) => lines.push(`<div class="chat-row"><div class="chat-time">${hhmm}</div><div class="chat-msg thought"><strong>${who}:</strong> ${msg}</div></div>`);
 
-        if (top) {
-          const target = top.ticker || 'el activo principal';
-          const tradeTarget = tradeTop?.ticker || target;
-          say(agentNames['macro-agent'], 'Acabo de mirar el panorama general. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No hay un macro que nos rompa la idea por la mitad.' : 'El macro está dando guerra y no invita a ir alegremente.'));
-          say(agentNames['news-catalyst-agent'], `En catalizadores hay conversación de verdad con ${target}. No es humo puro; algo se está moviendo alrededor.`);
-          think(agentNames['technical-agent'], `yo aquí todavía quiero que el volumen se moje antes de dar esto por bueno`);
-          say(agentNames['technical-agent'], `La pinta técnica de ${target} no es mala, pero el score ${top.score_tech ?? '-'} y el volumen ${top.rel_volume ?? '-'} aún me piden confirmación.`);
-          if (tradeTop) {
-            say(agentNames['crypto-news-spy-agent'], `En cripto, ${tradeTarget} viene con research ${tradeTop.research_sentiment || 'mixto'} y un delta ${tradeTop.research_score_delta ?? 0}. No es una locura, pero tampoco un regalo.`);
-          }
-          say(agentNames['risk-exec-agent'], `Por riesgo yo no me vuelvo loco: ${top.state || 'WATCH'} y ${top.decision_final || 'HOLD'}, con tamaño corto si alguien aprieta el gatillo.`);
-          think(agentNames['devil-advocate-agent'], top.argumento_en_contra || 'yo aquí no compro por vibes; si alguien la quiere, que me enseñe la confirmación');
-          if (inConclave.has('local-council-agent')) {
-            say(agentNames['local-council-agent'], `Vale, entro porque esto ya huele a empate peligroso. Mi trabajo aquí es cortar el ruido y dejar una instrucción clara.`, 'challenge');
-          }
-          say(agentNames['alpha-scout'], `Cerramos sala con ${target}: decisión ${top.decision_final || 'HOLD'} y confianza ${top.confidence_pct ?? top.score_final ?? '-' }%. Nadie se me calienta sin permiso.`, 'decision');
-        } else {
-          say(agentNames['alpha-scout'], 'Hoy no hay una tesis que mande de verdad. Seguimos currando, pero sin inventarnos entradas por aburrimiento.', 'decision');
+      if (top) {
+        const target = top.ticker || 'el activo principal';
+        const tradeTarget = tradeTop?.ticker || target;
+        say(agentNames['macro-agent'], 'Acabo de mirar el panorama general. ' + ((top.score_macro_adj ?? 0) >= 0 ? 'No hay un macro que nos rompa la idea por la mitad.' : 'El macro está dando guerra y no invita a ir alegremente.'));
+        say(agentNames['news-catalyst-agent'], `En catalizadores hay conversación de verdad con ${target}. No es humo puro; algo se está moviendo alrededor.`);
+        think(agentNames['technical-agent'], `yo aquí todavía quiero que el volumen se moje antes de dar esto por bueno`);
+        say(agentNames['technical-agent'], `La pinta técnica de ${target} no es mala, pero el score ${top.score_tech ?? '-'} y el volumen ${top.rel_volume ?? '-'} aún me piden confirmación.`);
+        if (tradeTop) {
+          say(agentNames['crypto-news-spy-agent'], `En cripto, ${tradeTarget} viene con research ${tradeTop.research_sentiment || 'mixto'} y un delta ${tradeTop.research_score_delta ?? 0}. No es una locura, pero tampoco un regalo.`);
         }
-
-        (live || []).slice(0, 5).forEach(x => {
-          const natural = String(x.text || 'Sin novedad por ahora.').replace(/^.*?:\s*/, '');
-          say(agentNames[x.agent] || x.agent, natural || 'Sin novedad por ahora.');
-        });
-
-        logEl.innerHTML = lines.join('');
+        say(agentNames['risk-exec-agent'], `Por riesgo yo no me vuelvo loco: ${top.state || 'WATCH'} y ${top.decision_final || 'HOLD'}, con tamaño corto si alguien aprieta el gatillo.`);
+        think(agentNames['devil-advocate-agent'], top.argumento_en_contra || 'yo aquí no compro por vibes; si alguien la quiere, que me enseñe la confirmación');
+        if (inConclave.has('local-council-agent')) {
+          say(agentNames['local-council-agent'], `Vale, entro porque esto ya huele a empate peligroso. Mi trabajo aquí es cortar el ruido y dejar una instrucción clara.`, 'challenge');
+        }
+        say(agentNames['alpha-scout'], `Cerramos sala con ${target}: decisión ${top.decision_final || 'HOLD'} y confianza ${top.confidence_pct ?? top.score_final ?? '-'}%. Nadie se me calienta sin permiso.`, 'decision');
+      } else {
+        say(agentNames['alpha-scout'], 'Hoy no hay una tesis que mande de verdad. Seguimos currando, pero sin inventarnos entradas por aburrimiento.', 'decision');
       }
+
+      (live || []).slice(0, 5).forEach(x => {
+        const natural = String(x.text || 'Sin novedad por ahora.').replace(/^.*?:\s*/, '');
+        say(agentNames[x.agent] || x.agent, natural || 'Sin novedad por ahora.');
+      });
+
+      logEl.innerHTML = lines.join('');
+    }
     }) ();
 
     async function openAnalysis(ticker) {
