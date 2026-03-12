@@ -31,6 +31,10 @@ CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.
 CRYPTO_ORDERS_PATH = Path(os.getenv("CRYPTO_ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json"))
 CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
 LEARNING_STATUS_PATH = Path(os.getenv("LEARNING_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/learning_status.json"))
+RESEARCH_AGENTS_PATH = Path(os.getenv("RESEARCH_AGENTS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_agents_latest.json"))
+RESEARCH_QUEUE_PATH = Path(os.getenv("RESEARCH_QUEUE_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_experiment_queue.json"))
+RESEARCH_RESULTS_PATH = Path(os.getenv("RESEARCH_RESULTS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_experiment_results.json"))
+RESEARCH_DEPLOYMENTS_PATH = Path(os.getenv("RESEARCH_DEPLOYMENTS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/config/research_deployments.json"))
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 STARTUP_LOG_PATH = Path(os.getenv("STARTUP_LOG_PATH", "C:/Users/Fernando/.openclaw/workspace/startup-stack.log"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
@@ -201,6 +205,29 @@ def load_learning_status():
         return d if isinstance(d, dict) else {"semaforo": "ROJO", "reason": "Formato invÃ¡lido", "trades_7d": 0}
     except Exception:
         return {"semaforo": "ROJO", "reason": "No se pudo leer learning status", "trades_7d": 0}
+
+
+def _load_json_file(path: Path, default):
+    if not path.exists():
+        return default
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, type(default)) or isinstance(default, (dict, list)) else data
+    except Exception:
+        return default
+
+
+def load_research_panel():
+    agents = _load_json_file(RESEARCH_AGENTS_PATH, {})
+    queue = _load_json_file(RESEARCH_QUEUE_PATH, {})
+    results = _load_json_file(RESEARCH_RESULTS_PATH, {})
+    deployments = _load_json_file(RESEARCH_DEPLOYMENTS_PATH, {})
+    return {
+        "agents": agents if isinstance(agents, dict) else {},
+        "queue": queue if isinstance(queue, dict) else {},
+        "results": results if isinstance(results, dict) else {},
+        "deployments": deployments if isinstance(deployments, dict) else {},
+    }
 
 
 def load_crypto_stream_status():
@@ -1155,6 +1182,7 @@ def home(request: Request):
     crypto_signals = load_crypto_snapshot()
     crypto_stream = load_crypto_stream_status()
     learning_status = load_learning_status()
+    research_panel = load_research_panel()
     crypto_orders = load_crypto_orders()
     commits = latest_commits()
     autopilot_log = load_autopilot_log()
@@ -1393,6 +1421,7 @@ def home(request: Request):
             "crypto_signals": crypto_signals,
             "crypto_stream": crypto_stream,
             "learning_status": learning_status,
+            "research_panel": research_panel,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed,
             "crypto_daily": crypto_orders.get("daily", {}),

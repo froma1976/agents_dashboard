@@ -1343,6 +1343,28 @@
       </div>
 
       <div class="card col-12">
+        <h2>Research Engine</h2>
+        <table>
+          <tr>
+            <th>Experimento</th>
+            <th>Módulo</th>
+            <th>Decisión</th>
+            <th>Estado candidato</th>
+            <th>Motivo</th>
+          </tr>
+          {% for item in (research_panel.queue.get('items', []) if research_panel.queue else [])[:6] %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.target_module }}</td>
+            <td><span class="badge {{ 'ok' if item.decision == 'promote' else ('warn' if item.decision == 'hold' else 'no') }}">{{ item.decision or '-' }}</span></td>
+            <td>{{ item.candidate_status or item.status or '-' }}</td>
+            <td>{{ item.rationale or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+
+      <div class="card col-12">
         <h2>Cartera Cripto (separada)</h2>
         <p>
           Stream:
