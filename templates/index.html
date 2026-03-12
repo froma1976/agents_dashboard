@@ -1344,6 +1344,7 @@
 
       <div class="card col-12">
         <h2>Research Engine</h2>
+        <p class="muted">Deployments activos: {% for d in (research_panel.deployments.get('deployments', []) if research_panel.deployments else []) %}<span class="badge ok">{{ d.module }}: {{ d.deployment_key }}</span> {% else %}Ninguno{% endfor %}</p>
         <table>
           <tr>
             <th>Experimento</th>
