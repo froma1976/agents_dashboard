@@ -1648,6 +1648,51 @@
 
     <div class="grid tab-section" data-tab="cerebro">
       <div class="card col-12">
+        <h2>Historial de órdenes unificado (Cerradas)</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Mercado</th>
+                <th>Ticker</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>P&L USD</th>
+                <th>Resultado</th>
+                <th>Abierta</th>
+                <th>Cerrada</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in unified_completed_orders %}
+              <tr>
+                <td><span class="badge {{ 'run' if o.market == 'Cripto' else 'off' }}">{{ o.market }}</span></td>
+                <td><strong>{{ o.ticker }}</strong></td>
+                <td>{{ o.entry_price or '-' }}</td>
+                <td>{{ o.exit_price or '-' }}</td>
+                <td>
+                  <span class="badge {{ 'ok' if (o.pnl_usd or 0) >= 0 else 'no' }}">
+                    {{ '%.4f'|format(o.pnl_usd or 0) }}
+                  </span>
+                </td>
+                <td>
+                   <span class="badge {{ 'ok' if (o.result or '')|upper == 'GANADA' else ('no' if (o.result or '')|upper == 'PERDIDA' else 'off' ) }}">
+                     {{ o.result or '-' }}
+                   </span>
+                </td>
+                <td class="muted">{{ o.opened_at }}</td>
+                <td><strong>{{ o.closed_at }}</strong></td>
+              </tr>
+              {% endfor %}
+              {% if not unified_completed_orders %}
+              <tr><td colspan="8">No hay órdenes cerradas registradas.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card col-12">
         <h2>Warehouse Historical Quant (Precios 15min)</h2>
         <p class="muted">Datos capturados crudos directamente desde Binance para tu motor matemático sin pasar por la
           nube. </p>

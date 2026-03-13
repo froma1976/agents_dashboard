@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import os
 import sqlite3
 import json
@@ -38,6 +38,15 @@ RESEARCH_DEPLOYMENTS_PATH = Path(os.getenv("RESEARCH_DEPLOYMENTS_PATH", "C:/User
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 STARTUP_LOG_PATH = Path(os.getenv("STARTUP_LOG_PATH", "C:/Users/Fernando/.openclaw/workspace/startup-stack.log"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
+
+
+def date_iso_to_es(iso_str: str) -> str:
+    if not iso_str: return "-"
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        return dt.strftime("%d/%m/%Y")
+    except: return iso_str
 
 app = FastAPI(title="Agent Ops Dashboard")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -1345,14 +1354,62 @@ def home(request: Request):
     crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
     crypto_unrealized = 0.0
     crypto_realized = 0.0
+
+    # Calculamos PnL realizado
     for c in crypto_completed:
         try:
             crypto_realized += float(c.get("pnl_usd") or 0)
         except Exception:
             pass
 
+    # Preparamos órdenes completadas unificadas (USANDO FECHAS ORIGINALES PARA ORDENAR)
+    unified_completed_orders = []
+    for o in completed_orders:
+        unified_completed_orders.append({
+            "market": "Cartera",
+            "ticker": o.get("ticker"),
+            "entry_price": o.get("entry_price"),
+            "exit_price": o.get("close_price") or o.get("exit_price"),
+            "result": o.get("result"),
+            "pnl_usd": o.get("pnl_usd") if o.get("pnl_usd") is not None else o.get("pnl_usd_est"),
+            "opened_at_raw": o.get("created_at") or o.get("opened_at"),
+            "closed_at_raw": o.get("closed_at"),
+        })
+
+    for o in crypto_completed:
+        unified_completed_orders.append({
+            "market": "Cripto",
+            "ticker": o.get("ticker"),
+            "entry_price": o.get("entry_price"),
+            "exit_price": o.get("close_price") or o.get("exit_price"),
+            "result": o.get("result"),
+            "pnl_usd": o.get("pnl_usd"),
+            "opened_at_raw": o.get("opened_at"),
+            "closed_at_raw": o.get("closed_at"),
+        })
+
+    # Ordenar por fecha de cierre (descendente)
+    def _sort_key(row):
+        return str(row.get("closed_at_raw") or row.get("opened_at_raw") or "")
+    unified_completed_orders = sorted(unified_completed_orders, key=_sort_key, reverse=True)
+
+    # Ahora formateamos las fechas para el display
+    for o in unified_completed_orders:
+        o["opened_at"] = date_iso_to_es(o.get("opened_at_raw"))
+        o["closed_at"] = date_iso_to_es(o.get("closed_at_raw"))
+
+    # También formateamos las listas específicas de cripto (reversas para ver las últimas arriba)
+    crypto_completed_view = []
+    for c in crypto_completed[::-1]:
+        # Creamos una copia para no alterar el objeto original si se usa en otros sitios
+        c_view = dict(c)
+        c_view["opened_at"] = date_iso_to_es(c.get("opened_at"))
+        c_view["closed_at"] = date_iso_to_es(c.get("closed_at"))
+        crypto_completed_view.append(c_view)
+
     for o in crypto_active:
         try:
+            o["opened_at"] = date_iso_to_es(o.get("opened_at"))
             ep = float(o.get("entry_price"))
             cp = float(crypto_map.get(o.get("ticker"), ep))
             o["current_price"] = round(cp, 6)
@@ -1423,7 +1480,9 @@ def home(request: Request):
             "learning_status": learning_status,
             "research_panel": research_panel,
             "crypto_orders_active": crypto_active,
-            "crypto_orders_completed": crypto_completed,
+            "orders_completed": completed_orders,
+            "crypto_orders_completed": crypto_completed_view,
+            "unified_completed_orders": unified_completed_orders[:40],
             "crypto_daily": crypto_orders.get("daily", {}),
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
             "crypto_realized_usd": round(crypto_realized, 4),
