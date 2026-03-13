@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import os
 import sqlite3
 import json
@@ -38,6 +38,15 @@ RESEARCH_DEPLOYMENTS_PATH = Path(os.getenv("RESEARCH_DEPLOYMENTS_PATH", "C:/User
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 STARTUP_LOG_PATH = Path(os.getenv("STARTUP_LOG_PATH", "C:/Users/Fernando/.openclaw/workspace/startup-stack.log"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
+
+
+def date_iso_to_es(iso_str: str) -> str:
+    if not iso_str: return "-"
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        return dt.strftime("%d/%m/%Y %H:%M:%S")
+    except: return iso_str
 
 app = FastAPI(title="Agent Ops Dashboard")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -1347,12 +1356,15 @@ def home(request: Request):
     crypto_realized = 0.0
     for c in crypto_completed:
         try:
+            c["opened_at"] = date_iso_to_es(c.get("opened_at"))
+            c["closed_at"] = date_iso_to_es(c.get("closed_at"))
             crypto_realized += float(c.get("pnl_usd") or 0)
         except Exception:
             pass
 
     for o in crypto_active:
         try:
+            o["opened_at"] = date_iso_to_es(o.get("opened_at"))
             ep = float(o.get("entry_price"))
             cp = float(crypto_map.get(o.get("ticker"), ep))
             o["current_price"] = round(cp, 6)
@@ -1372,8 +1384,8 @@ def home(request: Request):
             "exit_price": o.get("close_price") or o.get("exit_price"),
             "result": o.get("result"),
             "pnl_usd": o.get("pnl_usd") if o.get("pnl_usd") is not None else o.get("pnl_usd_est"),
-            "opened_at": o.get("created_at") or o.get("opened_at"),
-            "closed_at": o.get("closed_at"),
+            "opened_at": date_iso_to_es(o.get("created_at") or o.get("opened_at")),
+            "closed_at": date_iso_to_es(o.get("closed_at")),
         })
     for o in crypto_completed:
         unified_completed_orders.append({
@@ -1383,8 +1395,8 @@ def home(request: Request):
             "exit_price": o.get("close_price") or o.get("exit_price"),
             "result": o.get("result"),
             "pnl_usd": o.get("pnl_usd"),
-            "opened_at": o.get("opened_at"),
-            "closed_at": o.get("closed_at"),
+            "opened_at": date_iso_to_es(o.get("opened_at")),
+            "closed_at": date_iso_to_es(o.get("closed_at")),
         })
     def _sort_key(row):
         return str(row.get("closed_at") or row.get("opened_at") or "")
