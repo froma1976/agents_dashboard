@@ -717,6 +717,21 @@ def build_trade_detail(order: dict, book: str, state: str):
     }
 
 
+def summarize_strategy_modes(rows: list[dict], short_mode_label: str = "SHORT") -> dict:
+    counts = {"NORMAL": 0, "LATERAL": 0, "ALCISTA": 0, short_mode_label: 0}
+    for row in rows or []:
+        mode = str(row.get("strategy_mode") or "")
+        if mode == "range_lateral":
+            counts["LATERAL"] += 1
+        elif mode == "bull_trend":
+            counts["ALCISTA"] += 1
+        elif mode == "scalp_short":
+            counts[short_mode_label] += 1
+        else:
+            counts["NORMAL"] += 1
+    return counts
+
+
 def load_journal():
     if not JOURNAL_PATH.exists():
         return []
@@ -1762,6 +1777,10 @@ def home(request: Request):
     crypto_short_completed = crypto_short_orders.get("completed", []) or []
     crypto_portfolio = crypto_orders.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300})
     crypto_short_portfolio = crypto_short_orders.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300})
+    crypto_active_mode_counts = summarize_strategy_modes(crypto_active)
+    crypto_completed_mode_counts = summarize_strategy_modes(crypto_completed)
+    crypto_short_active_mode_counts = summarize_strategy_modes(crypto_short_active)
+    crypto_short_completed_mode_counts = summarize_strategy_modes(crypto_short_completed)
     active_crypto_tickers = {str(o.get("ticker")) for o in crypto_active if o.get("ticker")}
     active_crypto_short_tickers = {str(o.get("ticker")) for o in crypto_short_active if o.get("ticker")}
     crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
@@ -1941,8 +1960,12 @@ def home(request: Request):
             "research_panel": research_panel,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed_view,
+            "crypto_active_mode_counts": crypto_active_mode_counts,
+            "crypto_completed_mode_counts": crypto_completed_mode_counts,
             "crypto_short_orders_active": crypto_short_active,
             "crypto_short_orders_completed": crypto_short_completed_view,
+            "crypto_short_active_mode_counts": crypto_short_active_mode_counts,
+            "crypto_short_completed_mode_counts": crypto_short_completed_mode_counts,
             "crypto_daily": crypto_orders.get("daily", {}),
             "crypto_short_daily": crypto_short_orders.get("daily", {}),
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
