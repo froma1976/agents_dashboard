@@ -1676,8 +1676,8 @@
             <td>
               {% if c.execution_state == 'COMPRADA' or c.ticker in active_crypto_tickers %}
               <span class="badge ok">COMPRADA</span>
-              {% elif c.execution_state == 'LISTA' %}
-              <span class="badge warn">LISTA</span>
+              {% elif c.execution_state == 'ELEGIBLE' %}
+              <span class="badge warn">ELEGIBLE</span>
               {% else %}
               <span class="badge no">NO COMPRADA</span>
               {% endif %}

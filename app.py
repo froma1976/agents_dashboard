@@ -439,7 +439,7 @@ def explain_crypto_execution_blockers(candidate: dict, crypto_orders: dict, acti
 
     if reasons:
         return {"execution_state": "NO COMPRADA", "execution_reason": "; ".join(reasons), "risk_mode_live": mode}
-    return {"execution_state": "LISTA", "execution_reason": "cumple filtros del ejecutor", "risk_mode_live": mode}
+    return {"execution_state": "ELEGIBLE", "execution_reason": "apta para seleccion del ejecutor", "risk_mode_live": mode}
 
 
 def explain_crypto_short_execution_blockers(candidate: dict, crypto_orders: dict, active_tickers: set[str], risk_cfg: dict):
