@@ -1558,7 +1558,7 @@
           {% for o in crypto_orders_active %}
           <tr>
             <td><button type="button" class="tab-btn" onclick="openTradeDetail('long','active','{{ o.id }}')">{{ o.ticker }}</button></td>
-            <td><span class="badge {{ 'warn' if o.strategy_mode == 'range_lateral' else 'ok' }}">{{ 'LATERAL' if o.strategy_mode == 'range_lateral' else 'NORMAL' }}</span></td>
+            <td><span class="badge {{ 'warn' if o.strategy_mode == 'range_lateral' else ('ok' if o.strategy_mode == 'bull_trend' else 'ok') }}">{{ 'LATERAL' if o.strategy_mode == 'range_lateral' else ('ALCISTA' if o.strategy_mode == 'bull_trend' else 'NORMAL') }}</span></td>
             <td>{{ o.qty if o.qty is not none else '-' }}</td>
             <td>{{ o.entry_price }}</td>
             <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
@@ -1594,7 +1594,7 @@
           {% for o in crypto_orders_completed[:20] %}
           <tr>
             <td><button type="button" class="tab-btn" onclick="openTradeDetail('long','completed','{{ o.id }}')">{{ o.ticker }}</button></td>
-            <td><span class="badge {{ 'warn' if o.strategy_mode == 'range_lateral' else 'ok' }}">{{ 'LATERAL' if o.strategy_mode == 'range_lateral' else 'NORMAL' }}</span></td>
+            <td><span class="badge {{ 'warn' if o.strategy_mode == 'range_lateral' else ('ok' if o.strategy_mode == 'bull_trend' else 'ok') }}">{{ 'LATERAL' if o.strategy_mode == 'range_lateral' else ('ALCISTA' if o.strategy_mode == 'bull_trend' else 'NORMAL') }}</span></td>
             <td>{{ o.entry_price if o.entry_price is not none else '-' }}</td>
             <td>{{ o.close_price if o.close_price is not none else o.exit_price if o.exit_price is not none else '-' }}</td>
             <td><span class="badge {{ 'ok' if o.result == 'ganada' else ('warn' if o.result == 'timeout' else 'no') }}">{{ o.result or '-' }}</span></td>
@@ -3186,7 +3186,7 @@
       document.getElementById('anTarget').textContent = d.target_price ?? '-';
       document.getElementById('anStop').textContent = d.stop_price ?? '-';
       document.getElementById('tradeMeta').style.display = 'grid';
-      document.getElementById('tdMode').textContent = d.strategy_label || (d.strategy_mode === 'range_lateral' ? 'LATERAL' : (d.strategy_mode === 'scalp_short' ? 'SHORT' : 'NORMAL'));
+      document.getElementById('tdMode').textContent = d.strategy_label || (d.strategy_mode === 'range_lateral' ? 'LATERAL' : (d.strategy_mode === 'bull_trend' ? 'ALCISTA' : (d.strategy_mode === 'scalp_short' ? 'SHORT' : 'NORMAL')));
       document.getElementById('tdResult').textContent = d.result || '-';
       document.getElementById('tdPnl').textContent = d.pnl_usd ?? '-';
       document.getElementById('tdInterval').textContent = d.interval || '-';
