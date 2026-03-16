@@ -839,8 +839,10 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab-btn="inicio">Inicio</button>
       <button class="tab-btn" data-tab-btn="oportunidades">Oportunidades</button>
+      <button class="tab-btn" data-tab-btn="moonshot">Moonshot</button>
       <button class="tab-btn" data-tab-btn="cartera">Cartera</button>
       <button class="tab-btn" data-tab-btn="crypto">Cripto</button>
+      <button class="tab-btn" data-tab-btn="crypto-short">Cripto Short</button>
       <button class="tab-btn" data-tab-btn="oficina">Oficina</button>
       <button class="tab-btn" data-tab-btn="lstm">LSTM Monitor</button>
       <button class="tab-btn" data-tab-btn="cerebro">Cerebro Local 🧬</button>
@@ -1206,6 +1208,7 @@
           <tr>
             <th>Mercado</th>
             <th>Ticker</th>
+            <th>Lado</th>
             <th>Entrada</th>
             <th>Salida</th>
             <th>Resultado</th>
@@ -1216,7 +1219,7 @@
           {% for o in unified_completed_orders %}
           <tr>
             <td><span class="badge {{ 'ok' if o.market == 'Cripto' else 'warn' }}">{{ o.market }}</span></td>
-            <td>{{ o.ticker or '-' }}</td>
+            <td>{% if o.market == 'Cripto' and o.order_id %}<button type="button" class="tab-btn" onclick="openTradeDetail('{{ o.order_book }}','{{ o.order_state }}','{{ o.order_id }}')">{{ o.ticker or '-' }}</button>{% else %}{{ o.ticker or '-' }}{% endif %}</td>
             <td>{{ o.entry_price if o.entry_price is not none else '-' }}</td>
             <td>{{ o.exit_price if o.exit_price is not none else '-' }}</td>
             <td><span class="badge {{ 'ok' if o.result == 'ganada' else ('warn' if o.result in ['timeout','neutral'] else 'no') }}">{{ o.result or '-' }}</span></td>
@@ -1541,6 +1544,7 @@
         <table>
           <tr>
             <th>Ticker</th>
+            <th>Lado</th>
             <th>Entrada</th>
             <th>Precio actual</th>
             <th>%</th>
@@ -1552,8 +1556,7 @@
           </tr>
           {% for o in crypto_orders_active %}
           <tr>
-            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}-USD')">{{ o.ticker
-                }}</button></td>
+            <td><button type="button" class="tab-btn" onclick="openTradeDetail('long','active','{{ o.id }}')">{{ o.ticker }}</button></td>
             <td>{{ o.entry_price }}</td>
             <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
             <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move
@@ -1567,7 +1570,7 @@
           </tr>
           {% endfor %}
           {% if crypto_orders_active|length == 0 %}<tr>
-            <td colspan="9">No hay compras activas ahora mismo.</td>
+            <td colspan="10">No hay compras activas ahora mismo.</td>
           </tr>{% endif %}
         </table>
       </div>
@@ -1586,7 +1589,7 @@
           </tr>
           {% for o in crypto_orders_completed[:20] %}
           <tr>
-            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ o.ticker }}-USD')">{{ o.ticker }}</button></td>
+            <td><button type="button" class="tab-btn" onclick="openTradeDetail('long','completed','{{ o.id }}')">{{ o.ticker }}</button></td>
             <td>{{ o.entry_price if o.entry_price is not none else '-' }}</td>
             <td>{{ o.close_price if o.close_price is not none else o.exit_price if o.exit_price is not none else '-' }}</td>
             <td><span class="badge {{ 'ok' if o.result == 'ganada' else ('warn' if o.result == 'timeout' else 'no') }}">{{ o.result or '-' }}</span></td>
@@ -1596,7 +1599,7 @@
           </tr>
           {% endfor %}
           {% if crypto_orders_completed|length == 0 %}<tr>
-            <td colspan="7">Todavía no hay órdenes cripto cerradas.</td>
+            <td colspan="8">Todavía no hay órdenes cripto cerradas.</td>
           </tr>{% endif %}
         </table>
       </div>
@@ -1605,10 +1608,16 @@
         <h2>Cripto Scout (simulado) — lenguaje natural</h2>
         <p class="muted">Fuente: {{ crypto_signals.source or 'N/D' }} · actualización: {{ crypto_signals.generated_at or
           'N/D' }}{% if crypto_signals.freshness_min is not none %} (hace {{ crypto_signals.freshness_min }} min){%
-          endif %}</p>
+          endif %} {% if crypto_signals.is_cache %}<span class="badge no">CACHE</span>{% elif crypto_signals.is_recovered %}<span class="badge warn">RECOVERED</span>{% else %}<span class="badge ok">LIVE</span>{% endif %}</p>
+        {% if crypto_signals.is_cache %}
+        <p class="muted">Snapshot en fallback/cache. Puede no reflejar la última compra o cierre del autopilot. Motivo: {{ crypto_signals.stale_reason or 'sin detalle' }}</p>
+        {% elif crypto_signals.is_recovered %}
+        <p class="muted">CoinGecko ha fallado, pero el sistema ha reconstruido el snapshot automáticamente usando el último universo y refresco de Binance.</p>
+        {% endif %}
         <table>
           <tr>
             <th>Activo</th>
+            <th>Lado</th>
             <th>Precio USD</th>
             <th>Entrada</th>
             <th>Target</th>
@@ -1623,6 +1632,7 @@
             <th>Estado</th>
             <th>Decisión</th>
             <th>Ejecución</th>
+            <th>Bloqueo real</th>
             <th>Lectura en cristiano</th>
           </tr>
           {% for c in crypto_signals.top_opportunities[:10] if crypto_signals.top_opportunities is defined %}
@@ -1647,18 +1657,21 @@
             <td>{{ c.state }}</td>
             <td><span class="badge {{ 'ok' if c.decision_final=='BUY' else 'no' }}">{{ c.decision_final }}</span></td>
             <td>
-              {% if c.ticker in active_crypto_tickers %}
+              {% if c.execution_state == 'COMPRADA' or c.ticker in active_crypto_tickers %}
               <span class="badge ok">COMPRADA</span>
+              {% elif c.execution_state == 'LISTA' %}
+              <span class="badge warn">LISTA</span>
               {% else %}
               <span class="badge no">NO COMPRADA</span>
               {% endif %}
             </td>
+            <td>{{ c.execution_reason or '-' }}</td>
             <td>{{ c.argumento_en_contra }}</td>
           </tr>
           {% endfor %}
           {% if crypto_signals.top_opportunities is not defined or crypto_signals.top_opportunities|length == 0 %}
           <tr>
-            <td colspan="16">Sin datos cripto todavía (ejecuta ingest cripto).</td>
+            <td colspan="18">Sin datos cripto todavía (ejecuta ingest cripto).</td>
           </tr>
           {% endif %}
         </table>
@@ -2182,6 +2195,426 @@
 
     </div>
 
+    <div class="grid tab-section" data-tab="crypto-short">
+      {% set cps = crypto_short_portfolio|default({'capital_initial_usd':300,'cash_usd':300,'market_value_usd':0,'equity_usd':300}) %}
+      <div class="card col-12">
+        <h2>Motor Short Cripto (simulado)</h2>
+        <p>
+          <span class="badge {{ 'ok' if learning_status_short.semaforo=='VERDE' else ('warn' if learning_status_short.semaforo=='AMARILLO' else 'no') }}">{{ learning_status_short.semaforo }}</span>
+          <span class="muted">{{ learning_status_short.reason }}</span>
+        </p>
+        <table>
+          <tr>
+            <th>Trades 7d</th>
+            <th>Win rate</th>
+            <th>Expectancy</th>
+            <th>Profit Factor</th>
+            <th>PnL 7d</th>
+            <th>Estado motor</th>
+          </tr>
+          <tr>
+            <td>{{ learning_status_short.trades_7d or 0 }}</td>
+            <td>{{ learning_status_short.win_rate or 0 }}%</td>
+            <td>{{ learning_status_short.expectancy_usd or 0 }}</td>
+            <td>{{ learning_status_short.profit_factor or 0 }}</td>
+            <td>{{ learning_status_short.pnl_7d_usd or 0 }}</td>
+            <td>{{ crypto_short_daily.mode or 'normal' }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Scout Short</h2>
+        <p class="muted">Fuente: {{ crypto_short_signals.source or 'N/D' }} · actualización: {{ crypto_short_signals.generated_at or 'N/D' }}{% if crypto_short_signals.freshness_min is not none %} (hace {{ crypto_short_signals.freshness_min }} min){% endif %}</p>
+        <table>
+          <tr>
+            <th>Activo</th>
+            <th>Lado</th>
+            <th>Precio</th>
+            <th>Entrada short</th>
+            <th>Target</th>
+            <th>Stop</th>
+            <th>24h</th>
+            <th>7d</th>
+            <th>Score short</th>
+            <th>Confluencia</th>
+            <th>Estado</th>
+            <th>Decisión</th>
+            <th>Ejecución</th>
+            <th>Bloqueo real</th>
+          </tr>
+          {% for c in crypto_short_signals.top_opportunities[:10] if crypto_short_signals.top_opportunities is defined %}
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openAnalysis('{{ c.ticker }}-USD')">{{ c.ticker }}</button> · {{ c.name }}</td>
+            <td><span class="badge no">SHORT</span></td>
+            <td>{{ c.price_usd }}</td>
+            <td>{{ c.senior_report_short.setup.entry if c.senior_report_short and c.senior_report_short.setup else '-' }}</td>
+            <td>{{ c.senior_report_short.setup.tp1 if c.senior_report_short and c.senior_report_short.setup else '-' }}</td>
+            <td>{{ c.senior_report_short.setup.sl if c.senior_report_short and c.senior_report_short.setup else '-' }}</td>
+            <td><span class="badge {{ 'ok' if c.chg_24h_pct < 0 else 'no' }}">{{ c.chg_24h_pct }}%</span></td>
+            <td><span class="badge {{ 'ok' if c.chg_7d_pct < 0 else 'no' }}">{{ c.chg_7d_pct }}%</span></td>
+            <td>{{ c.score_short }}</td>
+            <td>{{ c.spy_confluence or 0 }}</td>
+            <td>{{ c.state_short }}</td>
+            <td><span class="badge {{ 'ok' if c.decision_short=='SELL_SHORT' else ('warn' if c.decision_short=='WATCH_SHORT' else 'no') }}">{{ c.decision_short }}</span></td>
+            <td>{% if c.execution_state == 'SHORT ACTIVO' or c.ticker in active_crypto_short_tickers %}<span class="badge ok">SHORT ACTIVO</span>{% elif c.execution_state == 'LISTO SHORT' %}<span class="badge warn">LISTO</span>{% else %}<span class="badge no">NO SHORT</span>{% endif %}</td>
+            <td>{{ c.execution_reason or '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if crypto_short_signals.top_opportunities is not defined or crypto_short_signals.top_opportunities|length == 0 %}
+          <tr><td colspan="14">Sin oportunidades short todavía.</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Cartera Short Cripto</h2>
+        <table>
+          <tr>
+            <th>Capital inicial</th>
+            <th>Cash libre</th>
+            <th>Valor reservado</th>
+            <th>PnL realizado</th>
+            <th>PnL no realizado</th>
+            <th>Equity</th>
+            <th>Activas</th>
+            <th>Cerradas</th>
+          </tr>
+          <tr>
+            <td>{{ cps['capital_initial_usd'] }}</td>
+            <td>{{ cps['cash_usd'] }}</td>
+            <td>{{ cps['market_value_usd'] }}</td>
+            <td>{{ crypto_short_realized_usd }}</td>
+            <td>{{ crypto_short_unrealized_usd_est }}</td>
+            <td>{{ cps['equity_usd'] }}</td>
+            <td>{{ crypto_short_orders_active|length }}</td>
+            <td>{{ crypto_short_orders_completed|length }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Shorts activos</h2>
+        <table>
+          <tr><th>Ticker</th><th>Lado</th><th>Entrada</th><th>Precio actual</th><th>%</th><th>PnL est.</th><th>Target</th><th>Stop</th><th>Abierta</th></tr>
+          {% for o in crypto_short_orders_active %}
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openTradeDetail('short','active','{{ o.id }}')">{{ o.ticker }}</button></td>
+            <td><span class="badge no">SHORT</span></td>
+            <td>{{ o.entry_price }}</td>
+            <td>{{ o.current_price if o.current_price is not none else '-' }}</td>
+            <td>{% if o.pct_move is not none %}<span class="badge {{ 'ok' if o.pct_move >= 0 else 'no' }}">{{ o.pct_move }}%</span>{% else %}-{% endif %}</td>
+            <td>{% if o.pnl_usd_est is not none %}<span class="badge {{ 'ok' if o.pnl_usd_est >= 0 else 'no' }}">{{ o.pnl_usd_est }}</span>{% else %}-{% endif %}</td>
+            <td>{{ o.target_price }}</td>
+            <td>{{ o.stop_price }}</td>
+            <td>{{ o.opened_at }}</td>
+          </tr>
+          {% endfor %}
+          {% if crypto_short_orders_active|length == 0 %}<tr><td colspan="9">No hay shorts activos.</td></tr>{% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Shorts cerrados</h2>
+        <table>
+          <tr><th>Ticker</th><th>Lado</th><th>Entrada</th><th>Salida</th><th>Resultado</th><th>PnL USD</th><th>Abierta</th><th>Cerrada</th></tr>
+          {% for o in crypto_short_orders_completed[:20] %}
+          <tr>
+            <td><button type="button" class="tab-btn" onclick="openTradeDetail('short','completed','{{ o.id }}')">{{ o.ticker }}</button></td>
+            <td><span class="badge no">SHORT</span></td>
+            <td>{{ o.entry_price if o.entry_price is not none else '-' }}</td>
+            <td>{{ o.close_price if o.close_price is not none else o.exit_price if o.exit_price is not none else '-' }}</td>
+            <td><span class="badge {{ 'ok' if o.result == 'ganada' else ('warn' if o.result == 'timeout' else 'no') }}">{{ o.result or '-' }}</span></td>
+            <td><span class="badge {{ 'ok' if (o.pnl_usd or 0) >= 0 else 'no' }}">{{ o.pnl_usd if o.pnl_usd is not none else '-' }}</span></td>
+            <td>{{ o.opened_at or '-' }}</td>
+            <td>{{ o.closed_at or '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if crypto_short_orders_completed|length == 0 %}<tr><td colspan="8">Todavía no hay shorts cerrados.</td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+
+    <div class="grid tab-section" data-tab="moonshot">
+      <div class="card col-12">
+        <h2>Motor Moonshot</h2>
+        <p>
+          Última lectura: <strong>{{ moonshot.generated_at or 'N/D' }}</strong>
+          <span class="muted">{% if moonshot.freshness_min is not none %}· hace {{ moonshot.freshness_min }} min{% endif %}</span>
+        </p>
+        <p class="muted">Este motor no busca scalp. Busca activos con potencial de movimiento explosivo en días, semanas o meses.</p>
+      </div>
+
+      <div class="card col-12">
+        <h2>Compound Snapshot</h2>
+        <table>
+          <tr>
+            <th>Modo de riesgo</th>
+            <th>Motivo</th>
+            <th>Equity</th>
+            <th>Cash</th>
+            <th>Freshness stocks</th>
+            <th>Freshness moonshot</th>
+          </tr>
+          <tr>
+            <td><span class="badge {{ 'ok' if openclaw_snapshot.summary.risk_mode == 'OFFENSIVE' else ('warn' if openclaw_snapshot.summary.risk_mode == 'SELECTIVE' else 'no') }}">{{ openclaw_snapshot.summary.risk_mode or '-' }}</span></td>
+            <td>{{ openclaw_snapshot.summary.risk_reason or '-' }}</td>
+            <td>{{ openclaw_snapshot.summary.equity_usd if openclaw_snapshot.summary is defined else '-' }}</td>
+            <td>{{ openclaw_snapshot.summary.cash_usd if openclaw_snapshot.summary is defined else '-' }}</td>
+            <td>{{ openclaw_snapshot.freshness.stocks_min if openclaw_snapshot.freshness is defined else '-' }} min</td>
+            <td>{{ openclaw_snapshot.freshness.moonshot_min if openclaw_snapshot.freshness is defined else '-' }} min</td>
+          </tr>
+        </table>
+        <div class="muted" style="margin-top:8px">Archivo: {{ openclaw_snapshot.archive_path or '-' }}</div>
+      </div>
+
+      <div class="card col-12">
+        <h2>Alertas de Narrativa</h2>
+        <table>
+          <tr>
+            <th>Narrativa</th>
+            <th>Dirección</th>
+            <th>Diff score</th>
+            <th>Diff activos</th>
+            <th>Top actual</th>
+          </tr>
+          {% for row in openclaw_snapshot.alerts.narrative_shifts[:10] if openclaw_snapshot.alerts is defined and openclaw_snapshot.alerts.narrative_shifts is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td><span class="badge {{ 'ok' if row.direction == 'UP' else ('warn' if row.direction == 'BROADENING' else 'no') }}">{{ row.direction }}</span></td>
+            <td>{{ row.avg_score_diff }}</td>
+            <td>{{ row.count_diff }}</td>
+            <td>{{ row.top_ticker }}</td>
+          </tr>
+          {% endfor %}
+          {% if openclaw_snapshot.alerts is not defined or openclaw_snapshot.alerts.narrative_shifts is not defined or openclaw_snapshot.alerts.narrative_shifts|length == 0 %}
+          <tr><td colspan="5">Sin alertas fuertes todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Top combinado Moonshot</h2>
+        <table>
+          <tr>
+            <th>Activo</th>
+            <th>Clase</th>
+            <th>Estado</th>
+            <th>Score</th>
+            <th>Horizonte</th>
+            <th>Por qué destaca</th>
+            <th>Riesgo</th>
+          </tr>
+          {% for row in moonshot.combined_top[:12] if moonshot.combined_top is defined %}
+          <tr>
+            <td><strong>{{ row.ticker }}</strong></td>
+            <td><span class="badge {{ 'ok' if row.asset_class == 'crypto' else 'warn' }}">{{ row.asset_class }}</span></td>
+            <td><span class="badge {{ 'ok' if row.state == 'PRIME' else ('warn' if row.state == 'EARLY' else 'no') }}">{{ row.state }}</span></td>
+            <td>{{ row.moonshot_score }}</td>
+            <td>{{ row.horizon }}</td>
+            <td>{{ ', '.join(row.why_now or []) }}</td>
+            <td>{{ row.risk or '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.combined_top is not defined or moonshot.combined_top|length == 0 %}
+          <tr><td colspan="7">Sin candidatos moonshot todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Moonshot Stocks</h2>
+        <table>
+          <tr>
+            <th>Ticker</th>
+            <th>Estado</th>
+            <th>Score</th>
+            <th>Volumen rel.</th>
+            <th>Catalizadores</th>
+          </tr>
+          {% for row in moonshot.stocks[:10] if moonshot.stocks is defined %}
+          <tr>
+            <td><strong>{{ row.ticker }}</strong></td>
+            <td><span class="badge {{ 'ok' if row.state == 'PRIME' else ('warn' if row.state == 'EARLY' else 'no') }}">{{ row.state }}</span></td>
+            <td>{{ row.moonshot_score }}</td>
+            <td>{{ row.drivers.rel_volume if row.drivers is defined else '-' }}</td>
+            <td>{{ row.drivers.catalyst_score if row.drivers is defined else '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.stocks is not defined or moonshot.stocks|length == 0 %}
+          <tr><td colspan="5">Sin candidatos de acciones</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Moonshot Crypto</h2>
+        <table>
+          <tr>
+            <th>Ticker</th>
+            <th>Estado</th>
+            <th>Score</th>
+            <th>Confluencia</th>
+            <th>Flow</th>
+          </tr>
+          {% for row in moonshot.crypto[:10] if moonshot.crypto is defined %}
+          <tr>
+            <td><strong>{{ row.ticker }}</strong></td>
+            <td><span class="badge {{ 'ok' if row.state == 'PRIME' else ('warn' if row.state == 'EARLY' else 'no') }}">{{ row.state }}</span></td>
+            <td>{{ row.moonshot_score }}</td>
+            <td>{{ row.drivers.spy_confluence if row.drivers is defined else '-' }}</td>
+            <td>{{ row.drivers.flow_ratio if row.drivers is defined else '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.crypto is not defined or moonshot.crypto|length == 0 %}
+          <tr><td colspan="5">Sin candidatos cripto</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Leaderboard Narrativas</h2>
+        <table>
+          <tr>
+            <th>Narrativa</th>
+            <th>Score medio</th>
+            <th>Activos</th>
+            <th>Top</th>
+          </tr>
+          {% for row in moonshot.leaderboards.by_narrative[:10] if moonshot.leaderboards is defined and moonshot.leaderboards.by_narrative is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_ticker }} ({{ row.top_score }})</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.leaderboards is not defined or moonshot.leaderboards.by_narrative is not defined or moonshot.leaderboards.by_narrative|length == 0 %}
+          <tr><td colspan="4">Sin leaderboard de narrativas todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Leaderboard Estados</h2>
+        <table>
+          <tr>
+            <th>Estado</th>
+            <th>Score medio</th>
+            <th>Activos</th>
+            <th>Top</th>
+          </tr>
+          {% for row in moonshot.leaderboards.by_state[:10] if moonshot.leaderboards is defined and moonshot.leaderboards.by_state is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_ticker }} ({{ row.top_score }})</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.leaderboards is not defined or moonshot.leaderboards.by_state is not defined or moonshot.leaderboards.by_state|length == 0 %}
+          <tr><td colspan="4">Sin leaderboard de estados todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Leaderboard Setups Crypto</h2>
+        <table>
+          <tr>
+            <th>Setup</th>
+            <th>Score medio</th>
+            <th>Activos</th>
+            <th>Top</th>
+          </tr>
+          {% for row in moonshot.leaderboards.moonshot_crypto_setup[:10] if moonshot.leaderboards is defined and moonshot.leaderboards.moonshot_crypto_setup is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_ticker }} ({{ row.top_score }})</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.leaderboards is not defined or moonshot.leaderboards.moonshot_crypto_setup is not defined or moonshot.leaderboards.moonshot_crypto_setup|length == 0 %}
+          <tr><td colspan="4">Sin leaderboard de setups todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Leaderboard Horas Crypto</h2>
+        <table>
+          <tr>
+            <th>Hora UTC</th>
+            <th>Score medio</th>
+            <th>Activos</th>
+            <th>Top</th>
+          </tr>
+          {% for row in moonshot.leaderboards.moonshot_crypto_hour[:10] if moonshot.leaderboards is defined and moonshot.leaderboards.moonshot_crypto_hour is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_ticker }} ({{ row.top_score }})</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.leaderboards is not defined or moonshot.leaderboards.moonshot_crypto_hour is not defined or moonshot.leaderboards.moonshot_crypto_hour|length == 0 %}
+          <tr><td colspan="4">Sin leaderboard de horas todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-6">
+        <h2>Leaderboard Tickers</h2>
+        <table>
+          <tr>
+            <th>Ticker</th>
+            <th>Score medio</th>
+            <th>Activos</th>
+            <th>Top</th>
+          </tr>
+          {% for row in moonshot.leaderboards.by_ticker[:10] if moonshot.leaderboards is defined and moonshot.leaderboards.by_ticker is defined %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.avg_score }}</td>
+            <td>{{ row.count }}</td>
+            <td>{{ row.top_ticker }} ({{ row.top_score }})</td>
+          </tr>
+          {% endfor %}
+          {% if moonshot.leaderboards is not defined or moonshot.leaderboards.by_ticker is not defined or moonshot.leaderboards.by_ticker|length == 0 %}
+          <tr><td colspan="4">Sin leaderboard de tickers todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <div class="card col-12">
+        <h2>Historial de Snapshots</h2>
+        <table>
+          <tr>
+            <th>Generado</th>
+            <th>Modo riesgo</th>
+            <th>Equity</th>
+            <th>Moonshots</th>
+            <th>Prime</th>
+            <th>Ruta</th>
+          </tr>
+          {% for row in openclaw_snapshot.history[:10] if openclaw_snapshot.history is defined %}
+          <tr>
+            <td>{{ row.generated_at }}</td>
+            <td>{{ row.risk_mode or '-' }}</td>
+            <td>{{ row.equity_usd }}</td>
+            <td>{{ row.moonshot_top_count }}</td>
+            <td>{{ row.prime_count }}</td>
+            <td>{{ row.path }}</td>
+          </tr>
+          {% endfor %}
+          {% if openclaw_snapshot.history is not defined or openclaw_snapshot.history|length == 0 %}
+          <tr><td colspan="6">Sin historial todavía</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
     <div class="grid tab-section" data-tab="tecnico">
       <div class="card col-12">
         <h2>Avanzado (solo para ajustes manuales)</h2>
@@ -2395,6 +2828,13 @@
         <div class="pill">Target: <span id="anTarget">-</span></div>
         <div class="pill">Stop: <span id="anStop">-</span></div>
       </div>
+      <div id="tradeMeta" style="display:none;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;margin:0 0 10px 0">
+        <div class="pill">Modo: <span id="tdMode">-</span></div>
+        <div class="pill">Resultado: <span id="tdResult">-</span></div>
+        <div class="pill">PnL USD: <span id="tdPnl">-</span></div>
+        <div class="pill">Intervalo: <span id="tdInterval">-</span></div>
+      </div>
+      <div id="tradeGridWrap" class="muted" style="display:none;margin-bottom:8px"></div>
       <svg id="anCandle" viewBox="0 0 900 260"
         style="width:100%;height:260px;border:1px solid #2a3a5b;border-radius:10px;background:#0b1222"></svg>
     </div>
@@ -2598,24 +3038,25 @@
     }
     }) ();
 
-    async function openAnalysis(ticker) {
-      const modal = document.getElementById('analysisModal');
-      modal.style.display = 'flex';
-      const res = await fetch(`/api/analysis/${encodeURIComponent(ticker)}`);
-      const d = await res.json();
-      document.getElementById('anTitle').textContent = `Análisis detallado · ${d.ticker}`;
-      document.getElementById('anNarrativa').textContent = d.narrativa || '';
-      document.getElementById('anPrice').textContent = d.price ?? '-';
-      document.getElementById('anEntry').textContent = d.entry_price ?? '-';
-      document.getElementById('anTarget').textContent = d.target_price ?? '-';
-      document.getElementById('anStop').textContent = d.stop_price ?? '-';
-
-      const svg = document.getElementById('anCandle');
-      const c = Array.isArray(d.candles) ? d.candles : [];
-      if (c.length < 2) { svg.innerHTML = ''; return; }
+    function renderTradeChart(svg, payload) {
+      const c = Array.isArray(payload.candles) ? payload.candles : [];
+      if (c.length < 2) {
+        svg.innerHTML = '<text x="50%" y="50%" fill="#94a3b8" text-anchor="middle" font-size="14">No hay velas suficientes para dibujar este trade</text>';
+        return;
+      }
+      const markers = payload.markers || {};
+      const levels = [];
+      ['entry_price', 'target_price', 'stop_price', 'exit_price'].forEach((k) => {
+        const v = Number(markers[k]);
+        if (Number.isFinite(v) && v > 0) levels.push(v);
+      });
+      (markers.grid_levels || []).forEach((v) => {
+        const num = Number(v);
+        if (Number.isFinite(num) && num > 0) levels.push(num);
+      });
+      const hi = Math.max(...c.map(x => x.h), ...(levels.length ? levels : [0]));
+      const lo = Math.min(...c.map(x => x.l), ...(levels.length ? levels : [999999999]));
       const w = 900, h = 260, p = 24;
-      const hi = Math.max(...c.map(x => x.h));
-      const lo = Math.min(...c.map(x => x.l));
       const span = (hi - lo) || 1;
       const xStep = (w - 2 * p) / c.length;
       const y = v => h - p - ((v - lo) / span) * (h - 2 * p);
@@ -2629,7 +3070,132 @@
         const bh = Math.max(1, Math.abs(y(k.o) - y(k.c)));
         html += `<rect x="${x - bodyW / 2}" y="${by}" width="${bodyW}" height="${bh}" fill="${color}" opacity="0.9"/>`;
       });
+      const lastX = p + (c.length - 0.5) * xStep;
+      const lineDefs = [
+        ['entry_price', '#93c5fd', 'Entrada'],
+        ['target_price', '#34d399', 'Target'],
+        ['stop_price', '#f87171', 'Stop'],
+        ['exit_price', '#fbbf24', 'Salida'],
+      ];
+      lineDefs.forEach(([key, color, label]) => {
+        const val = Number(markers[key]);
+        if (!Number.isFinite(val) || val <= 0) return;
+        const yy = y(val);
+        html += `<line x1="${p}" y1="${yy}" x2="${w - p}" y2="${yy}" stroke="${color}" stroke-width="1.4" stroke-dasharray="6 4"/>`;
+        html += `<text x="${w - p - 4}" y="${yy - 6}" fill="${color}" text-anchor="end" font-size="11">${label} ${val.toFixed(4)}</text>`;
+      });
+      (markers.grid_levels || []).forEach((val, idx) => {
+        const num = Number(val);
+        if (!Number.isFinite(num) || num <= 0) return;
+        const yy = y(num);
+        html += `<line x1="${p}" y1="${yy}" x2="${w - p}" y2="${yy}" stroke="#60a5fa" stroke-width="0.9" stroke-dasharray="2 6" opacity="0.55"/>`;
+        html += `<text x="${p + 4}" y="${yy - 4}" fill="#93c5fd" font-size="10">G${idx + 1}</text>`;
+      });
+      const firstTs = c[0].t;
+      const lastTs = c[c.length - 1].t;
+      const nearestCandleTs = (iso) => {
+        const ts = Date.parse(String(iso || ''));
+        if (!Number.isFinite(ts)) return null;
+        let best = c[0].t;
+        let bestDiff = Math.abs(best - ts);
+        for (const candle of c) {
+          const diff = Math.abs(candle.t - ts);
+          if (diff < bestDiff) {
+            best = candle.t;
+            bestDiff = diff;
+          }
+        }
+        return best;
+      };
+      const projectX = (iso) => {
+        const ts = nearestCandleTs(iso);
+        if (!Number.isFinite(ts) || lastTs <= firstTs) return null;
+        const ratio = Math.max(0, Math.min(1, (ts - firstTs) / (lastTs - firstTs)));
+        return p + ratio * (w - 2 * p);
+      };
+      const openX = projectX(payload.opened_at);
+      const closeX = projectX(payload.closed_at);
+      if (openX !== null) html += `<line x1="${openX}" y1="${p}" x2="${openX}" y2="${h - p}" stroke="#e5e7eb" stroke-width="1" opacity="0.65"/><text x="${openX + 4}" y="${p + 12}" fill="#e5e7eb" font-size="10">Open</text>`;
+      if (closeX !== null) html += `<line x1="${closeX}" y1="${p}" x2="${closeX}" y2="${h - p}" stroke="#fbbf24" stroke-width="1" opacity="0.75"/><text x="${closeX + 4}" y="${p + 24}" fill="#fbbf24" font-size="10">Close</text>`;
+
+      const pointStyles = {
+        buy: { fill: '#22c55e', stroke: '#dcfce7', label: 'BUY' },
+        sell: { fill: '#ef4444', stroke: '#fee2e2', label: 'SELL' },
+      };
+      (markers.event_points || []).forEach((point) => {
+        const price = Number(point.price);
+        const px = projectX(point.time);
+        if (!Number.isFinite(price) || price <= 0 || px === null) return;
+        const py = y(price);
+        const style = pointStyles[point.kind] || { fill: '#fbbf24', stroke: '#fef3c7', label: point.label || 'P' };
+        html += `<circle cx="${px}" cy="${py}" r="5.5" fill="${style.fill}" stroke="${style.stroke}" stroke-width="1.6"/>`;
+        html += `<text x="${px + 8}" y="${py - 8}" fill="${style.fill}" font-size="11" font-weight="700">${point.label || style.label}</text>`;
+      });
       svg.innerHTML = html;
+    }
+
+    async function openAnalysis(ticker) {
+      const modal = document.getElementById('analysisModal');
+      modal.style.display = 'flex';
+       document.getElementById('tradeMeta').style.display = 'none';
+       document.getElementById('tradeGridWrap').style.display = 'none';
+      const res = await fetch(`/api/analysis/${encodeURIComponent(ticker)}`);
+      const d = await res.json();
+      document.getElementById('anTitle').textContent = `Análisis detallado · ${d.ticker}`;
+      document.getElementById('anNarrativa').textContent = d.narrativa || '';
+      document.getElementById('anPrice').textContent = d.price ?? '-';
+      document.getElementById('anEntry').textContent = d.entry_price ?? '-';
+      document.getElementById('anTarget').textContent = d.target_price ?? '-';
+      document.getElementById('anStop').textContent = d.stop_price ?? '-';
+
+      renderTradeChart(document.getElementById('anCandle'), {
+        candles: d.candles || [],
+        markers: {
+          entry_price: d.entry_price,
+          target_price: d.target_price,
+          stop_price: d.stop_price,
+          exit_price: null,
+          grid_levels: [],
+          event_points: [
+            d.entry_price ? { kind: 'buy', label: 'Entrada', time: null, price: d.entry_price } : null,
+          ].filter(Boolean),
+        },
+      });
+    }
+
+    async function openTradeDetail(book, state, orderId) {
+      const modal = document.getElementById('analysisModal');
+      modal.style.display = 'flex';
+      const res = await fetch(`/api/crypto-order-detail/${encodeURIComponent(book)}/${encodeURIComponent(state)}/${encodeURIComponent(orderId)}`);
+      if (!res.ok) {
+        document.getElementById('anTitle').textContent = 'Trade detail';
+        document.getElementById('anNarrativa').textContent = 'No pude cargar el detalle del trade.';
+        renderTradeChart(document.getElementById('anCandle'), { candles: [], markers: {} });
+        return;
+      }
+      const d = await res.json();
+      document.getElementById('anTitle').textContent = `Trade detail · ${d.ticker}`;
+      document.getElementById('anNarrativa').textContent = d.summary || d.strategy_reason || '';
+      document.getElementById('anPrice').textContent = d.current_price ?? d.exit_price ?? '-';
+      document.getElementById('anEntry').textContent = d.entry_price ?? '-';
+      document.getElementById('anTarget').textContent = d.target_price ?? '-';
+      document.getElementById('anStop').textContent = d.stop_price ?? '-';
+      document.getElementById('tradeMeta').style.display = 'grid';
+      document.getElementById('tdMode').textContent = d.strategy_mode || '-';
+      document.getElementById('tdResult').textContent = d.result || '-';
+      document.getElementById('tdPnl').textContent = d.pnl_usd ?? '-';
+      document.getElementById('tdInterval').textContent = d.interval || '-';
+      const gridWrap = document.getElementById('tradeGridWrap');
+      const levels = (((d.markers || {}).grid_levels) || []).map(x => Number(x)).filter(x => Number.isFinite(x));
+      if (levels.length) {
+        const band = (d.markers || {}).grid_band_index;
+        gridWrap.style.display = 'block';
+        gridWrap.textContent = `Grid lateral ${band !== null && band !== undefined ? `· banda ${band}` : ''}: ${levels.map(x => x.toFixed(4)).join(' | ')}`;
+      } else {
+        gridWrap.style.display = 'none';
+        gridWrap.textContent = '';
+      }
+      renderTradeChart(document.getElementById('anCandle'), d);
     }
     function closeAnalysis() { document.getElementById('analysisModal').style.display = 'none'; }
 

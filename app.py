@@ -8,8 +8,10 @@ import subprocess
 import urllib.request
 import urllib.parse
 from datetime import datetime, UTC, timedelta
-from fastapi import FastAPI, Request, Form
+import secrets
+from fastapi import FastAPI, Request, Form, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
@@ -29,8 +31,16 @@ SNAPSHOT_PATH = Path(os.getenv("SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/wor
 BACKUP_ROOT = Path(os.getenv("BACKUP_ROOT", "C:/Users/Fernando/.openclaw/workspace/backups/state"))
 CRYPTO_SIGNALS_PATH = Path(os.getenv("CRYPTO_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_free.json"))
 CRYPTO_ORDERS_PATH = Path(os.getenv("CRYPTO_ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_orders_sim.json"))
+CRYPTO_SHORT_SIGNALS_PATH = Path(os.getenv("CRYPTO_SHORT_SIGNALS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_snapshot_short.json"))
+CRYPTO_SHORT_ORDERS_PATH = Path(os.getenv("CRYPTO_SHORT_ORDERS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_short_orders_sim.json"))
+CRYPTO_RISK_PATH = Path(os.getenv("CRYPTO_RISK_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/config/risk.yaml"))
+CRYPTO_SHORT_RISK_PATH = Path(os.getenv("CRYPTO_SHORT_RISK_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/config/risk_short.yaml"))
+CRYPTO_HISTORY_DIR = Path(os.getenv("CRYPTO_HISTORY_DIR", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/history"))
 CRYPTO_STREAM_STATUS_PATH = Path(os.getenv("CRYPTO_STREAM_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/crypto_stream_status.json"))
 LEARNING_STATUS_PATH = Path(os.getenv("LEARNING_STATUS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/learning_status.json"))
+LEARNING_STATUS_SHORT_PATH = Path(os.getenv("LEARNING_STATUS_SHORT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/learning_status_short.json"))
+MOONSHOT_CANDIDATES_PATH = Path(os.getenv("MOONSHOT_CANDIDATES_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/moonshot_candidates.json"))
+OPENCLAW_SNAPSHOT_PATH = Path(os.getenv("OPENCLAW_SNAPSHOT_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/openclaw_system_snapshot.json"))
 RESEARCH_AGENTS_PATH = Path(os.getenv("RESEARCH_AGENTS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_agents_latest.json"))
 RESEARCH_QUEUE_PATH = Path(os.getenv("RESEARCH_QUEUE_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_experiment_queue.json"))
 RESEARCH_RESULTS_PATH = Path(os.getenv("RESEARCH_RESULTS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/research_experiment_results.json"))
@@ -38,6 +48,13 @@ RESEARCH_DEPLOYMENTS_PATH = Path(os.getenv("RESEARCH_DEPLOYMENTS_PATH", "C:/User
 GPT53_BUDGET_PATH = Path(os.getenv("GPT53_BUDGET_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/gpt53_budget.json"))
 STARTUP_LOG_PATH = Path(os.getenv("STARTUP_LOG_PATH", "C:/Users/Fernando/.openclaw/workspace/startup-stack.log"))
 GPT53_MODE = os.getenv("GPT53_MODE", "normal").strip().lower()
+
+# --- CACHE DE API PROBES (evitar llamadas externas en cada carga de pagina) ---
+_api_probe_cache = {"status": {}, "last_check": 0, "ttl_seconds": 300}  # 5 min cache
+
+# --- AUTENTICACION DESACTIVADA ---
+def verify_credentials():
+    return "admin"
 
 
 def date_iso_to_es(iso_str: str) -> str:
@@ -47,6 +64,15 @@ def date_iso_to_es(iso_str: str) -> str:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
         return dt.strftime("%d/%m/%Y")
     except: return iso_str
+
+
+def parse_iso_utc(value: str | None):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
 
 app = FastAPI(title="Agent Ops Dashboard")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -189,7 +215,7 @@ def load_signals_snapshot():
 
 def load_crypto_snapshot():
     if not CRYPTO_SIGNALS_PATH.exists():
-        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None, "is_cache": False, "stale_reason": "sin snapshot"}
     try:
         data = json.loads(CRYPTO_SIGNALS_PATH.read_text(encoding="utf-8"))
         gen = data.get("generated_at")
@@ -201,9 +227,35 @@ def load_crypto_snapshot():
             except Exception:
                 freshness = None
         data["freshness_min"] = freshness
+        source = str(data.get("source") or "")
+        notes = str(data.get("notes") or "")
+        data["is_recovered"] = source == "snapshot-recovered"
+        data["is_cache"] = source == "snapshot-cache" or "fallback" in notes.lower()
+        data["stale_reason"] = notes if data["is_cache"] else ""
         return data
     except Exception:
-        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None}
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None, "is_cache": False, "stale_reason": "error leyendo snapshot"}
+
+
+def load_crypto_short_snapshot():
+    if not CRYPTO_SHORT_SIGNALS_PATH.exists():
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None, "is_cache": False, "stale_reason": "sin snapshot"}
+    try:
+        data = json.loads(CRYPTO_SHORT_SIGNALS_PATH.read_text(encoding="utf-8"))
+        gen = data.get("generated_at")
+        freshness = None
+        if gen:
+            try:
+                dt = datetime.fromisoformat(gen.replace("Z", "+00:00"))
+                freshness = int((datetime.now(UTC) - dt).total_seconds() // 60)
+            except Exception:
+                freshness = None
+        data["freshness_min"] = freshness
+        data["is_cache"] = False
+        data["stale_reason"] = ""
+        return data
+    except Exception:
+        return {"generated_at": None, "assets": [], "top_opportunities": [], "freshness_min": None, "is_cache": False, "stale_reason": "error leyendo snapshot"}
 
 
 def load_learning_status():
@@ -216,6 +268,45 @@ def load_learning_status():
         return {"semaforo": "ROJO", "reason": "No se pudo leer learning status", "trades_7d": 0}
 
 
+def load_learning_status_short():
+    if not LEARNING_STATUS_SHORT_PATH.exists():
+        return {"semaforo": "ROJO", "reason": "Sin datos suficientes", "trades_7d": 0, "expectancy_usd": 0, "profit_factor": 0}
+    try:
+        d = json.loads(LEARNING_STATUS_SHORT_PATH.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {"semaforo": "ROJO", "reason": "Formato invalido", "trades_7d": 0}
+    except Exception:
+        return {"semaforo": "ROJO", "reason": "No se pudo leer learning short", "trades_7d": 0}
+
+
+def load_moonshot_candidates():
+    if not MOONSHOT_CANDIDATES_PATH.exists():
+        return {"generated_at": None, "stocks": [], "crypto": [], "combined_top": [], "freshness_min": None}
+    try:
+        data = json.loads(MOONSHOT_CANDIDATES_PATH.read_text(encoding="utf-8"))
+        gen = data.get("generated_at")
+        freshness = None
+        if gen:
+            try:
+                dt = datetime.fromisoformat(gen.replace("Z", "+00:00"))
+                freshness = int((datetime.now(UTC) - dt).total_seconds() // 60)
+            except Exception:
+                freshness = None
+        data["freshness_min"] = freshness
+        return data if isinstance(data, dict) else {"generated_at": None, "stocks": [], "crypto": [], "combined_top": [], "freshness_min": None}
+    except Exception:
+        return {"generated_at": None, "stocks": [], "crypto": [], "combined_top": [], "freshness_min": None}
+
+
+def load_openclaw_snapshot():
+    if not OPENCLAW_SNAPSHOT_PATH.exists():
+        return {"generated_at": None, "summary": {}, "domains": {}, "freshness": {}}
+    try:
+        data = json.loads(OPENCLAW_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {"generated_at": None, "summary": {}, "domains": {}, "freshness": {}}
+    except Exception:
+        return {"generated_at": None, "summary": {}, "domains": {}, "freshness": {}}
+
+
 def _load_json_file(path: Path, default):
     if not path.exists():
         return default
@@ -224,6 +315,162 @@ def _load_json_file(path: Path, default):
         return data if isinstance(data, type(default)) or isinstance(default, (dict, list)) else data
     except Exception:
         return default
+
+
+def _parse_scalar(value: str):
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    low = raw.lower()
+    if low == "true":
+        return True
+    if low == "false":
+        return False
+    try:
+        if "." in raw:
+            return float(raw)
+        return int(raw)
+    except Exception:
+        return raw.strip('"').strip("'")
+
+
+def load_simple_risk_config(path: Path, default: dict):
+    cfg = dict(default)
+    if not path.exists():
+        return cfg
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or ":" not in stripped:
+                continue
+            key, raw_value = stripped.split(":", 1)
+            key = key.strip()
+            if key in cfg:
+                cfg[key] = _parse_scalar(raw_value)
+    except Exception:
+        return default
+    return cfg
+
+
+def load_crypto_risk_config():
+    default = {
+        "normal_min_score": 75,
+        "defensive_min_score": 80,
+        "defensive_min_confluence": 2,
+        "min_notional_usd": 10.0,
+        "min_target_net_pct": 0.45,
+        "min_expected_net_profit_usd": 0.25,
+        "max_alloc_per_trade_usd": 60.0,
+    }
+    return load_simple_risk_config(CRYPTO_RISK_PATH, default)
+
+
+def load_crypto_short_risk_config():
+    default = {
+        "normal_min_score": 72,
+        "defensive_min_score": 78,
+        "defensive_min_confluence": 2,
+        "min_notional_usd": 10.0,
+        "min_target_net_pct": 0.5,
+        "min_expected_net_profit_usd": 0.25,
+        "max_alloc_per_trade_usd": 60.0,
+    }
+    return load_simple_risk_config(CRYPTO_SHORT_RISK_PATH, default)
+
+
+def explain_crypto_execution_blockers(candidate: dict, crypto_orders: dict, active_crypto_tickers: set[str], risk_cfg: dict):
+    ticker = str(candidate.get("ticker") or "")
+    if ticker in active_crypto_tickers:
+        return {"execution_state": "COMPRADA", "execution_reason": "ya tiene una posicion activa"}
+
+    reasons = []
+    daily = (crypto_orders or {}).get("daily") or {}
+    portfolio = (crypto_orders or {}).get("portfolio") or {}
+    mode = str(daily.get("mode") or "normal")
+    paused = bool(daily.get("paused"))
+    if paused:
+        reasons.append(f"pausado: {daily.get('pause_reason') or 'bloqueo de riesgo'}")
+
+    if candidate.get("decision_final") != "BUY":
+        reasons.append(f"decision {candidate.get('decision_final') or 'N/D'}")
+    if candidate.get("state") not in {"READY", "TRIGGERED"}:
+        reasons.append(f"estado {candidate.get('state') or 'N/D'}")
+
+    confluence = int(candidate.get("spy_confluence") or 0)
+    min_confluence = int(risk_cfg.get("defensive_min_confluence", 2) if mode == "defensive" else 1)
+    if confluence < min_confluence:
+        reasons.append(f"confluencia {confluence} < {min_confluence}")
+
+    score = int(candidate.get("score_final") or candidate.get("score") or 0)
+    normal_min_score = int(risk_cfg.get("normal_min_score", 75) or 75)
+    defensive_min_score = int(risk_cfg.get("defensive_min_score", 80) or 80)
+    if score < normal_min_score:
+        reasons.append(f"score {score} < {normal_min_score}")
+    if mode == "defensive" and score < defensive_min_score:
+        reasons.append(f"modo defensivo pide {defensive_min_score}")
+
+    breakout = int(candidate.get("spy_breakout") or 0)
+    chart = int(candidate.get("spy_chart") or 0)
+    if max(breakout, chart) <= 0 and score < 50:
+        reasons.append("sin breakout/chart y score bajo")
+
+    cash = float(portfolio.get("cash_usd") or 0)
+    min_notional = float(risk_cfg.get("min_notional_usd", 10.0) or 10.0)
+    if cash < min_notional:
+        reasons.append(f"cash {round(cash,2)} < {min_notional}")
+
+    price = float(candidate.get("price_usd") or 0)
+    target = candidate.get("senior_report", {}).get("setup", {}).get("tp1") if isinstance(candidate.get("senior_report"), dict) else None
+    try:
+        target = float(target)
+    except Exception:
+        target = 0.0
+    fee_bps = 10.0
+    slippage_bps = 5.0
+    if price > 0 and target > price:
+        net_return_pct = (((target * (1 - slippage_bps / 10000.0)) - price) / price * 100.0) - ((2 * fee_bps) / 100.0)
+        if net_return_pct < float(risk_cfg.get("min_target_net_pct", 0.45) or 0.45):
+            reasons.append(f"target neto {round(net_return_pct,2)}% < minimo")
+        required_notional = float(risk_cfg.get("min_expected_net_profit_usd", 0.25) or 0.25) / max(net_return_pct / 100.0, 1e-9)
+        if required_notional > cash:
+            reasons.append(f"cash {round(cash,2)} insuficiente para neto minimo")
+        elif required_notional > float(risk_cfg.get("max_alloc_per_trade_usd", 60.0) or 60.0):
+            reasons.append(f"necesita > {round(float(risk_cfg.get('max_alloc_per_trade_usd', 60.0) or 60.0),2)} usd")
+
+    if reasons:
+        return {"execution_state": "NO COMPRADA", "execution_reason": "; ".join(reasons), "risk_mode_live": mode}
+    return {"execution_state": "LISTA", "execution_reason": "cumple filtros del ejecutor", "risk_mode_live": mode}
+
+
+def explain_crypto_short_execution_blockers(candidate: dict, crypto_orders: dict, active_tickers: set[str], risk_cfg: dict):
+    ticker = str(candidate.get("ticker") or "")
+    if ticker in active_tickers:
+        return {"execution_state": "SHORT ACTIVO", "execution_reason": "ya tiene una posicion short activa"}
+    reasons = []
+    daily = (crypto_orders or {}).get("daily") or {}
+    portfolio = (crypto_orders or {}).get("portfolio") or {}
+    mode = str(daily.get("mode") or "normal")
+    if bool(daily.get("paused")):
+        reasons.append(f"pausado: {daily.get('pause_reason') or 'bloqueo de riesgo'}")
+    if candidate.get("decision_short") != "SELL_SHORT":
+        reasons.append(f"decision {candidate.get('decision_short') or 'N/D'}")
+    if candidate.get("state_short") not in {"READY", "TRIGGERED"}:
+        reasons.append(f"estado {candidate.get('state_short') or 'N/D'}")
+    confluence = int(candidate.get("spy_confluence") or 0)
+    min_confluence = int(risk_cfg.get("defensive_min_confluence", 2) if mode == "defensive" else 1)
+    if confluence < min_confluence:
+        reasons.append(f"confluencia {confluence} < {min_confluence}")
+    score = int(candidate.get("score_short") or 0)
+    if score < int(risk_cfg.get("normal_min_score", 72) or 72):
+        reasons.append(f"score short {score} < {int(risk_cfg.get('normal_min_score', 72) or 72)}")
+    if mode == "defensive" and score < int(risk_cfg.get("defensive_min_score", 78) or 78):
+        reasons.append(f"modo defensivo pide {int(risk_cfg.get('defensive_min_score', 78) or 78)}")
+    cash = float(portfolio.get("cash_usd") or 0)
+    if cash < float(risk_cfg.get("min_notional_usd", 10.0) or 10.0):
+        reasons.append("cash insuficiente")
+    if reasons:
+        return {"execution_state": "NO SHORT", "execution_reason": "; ".join(reasons), "risk_mode_live": mode}
+    return {"execution_state": "LISTO SHORT", "execution_reason": "cumple filtros del ejecutor short", "risk_mode_live": mode}
 
 
 def load_research_panel():
@@ -335,6 +582,134 @@ def load_crypto_orders():
         }
     except Exception:
         return {"active": [], "completed": [], "daily": {"trades": 0}, "portfolio": {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300}}
+
+
+def load_crypto_order_book(book: str):
+    if book == "short":
+        return _load_json_file(CRYPTO_SHORT_ORDERS_PATH, {"active": [], "completed": [], "daily": {}, "portfolio": {}})
+    return load_crypto_orders()
+
+
+def normalize_crypto_pair(ticker: str) -> str:
+    raw = str(ticker or "").upper().replace("-USD", "").strip()
+    if not raw:
+        return ""
+    if raw.endswith(("USDT", "USDC", "BUSD", "FDUSD")):
+        return raw
+    return f"{raw}USDT"
+
+
+def load_trade_candles(ticker: str, opened_at: str | None, closed_at: str | None):
+    pair = normalize_crypto_pair(ticker)
+    if not pair:
+        return {"candles": [], "interval": None}
+
+    opened_dt = parse_iso_utc(opened_at) or (datetime.now(UTC) - timedelta(hours=8))
+    closed_dt = parse_iso_utc(closed_at) or datetime.now(UTC)
+    trade_minutes = max(30, int((closed_dt - opened_dt).total_seconds() // 60))
+    interval = "5m" if trade_minutes <= 24 * 60 else "15m"
+    path = CRYPTO_HISTORY_DIR / f"{pair}_{interval}.csv"
+    if not path.exists() and interval == "5m":
+        interval = "15m"
+        path = CRYPTO_HISTORY_DIR / f"{pair}_{interval}.csv"
+    if not path.exists():
+        return {"candles": [], "interval": interval}
+
+    pad_before = timedelta(minutes=90 if interval == "5m" else 240)
+    pad_after = timedelta(minutes=90 if interval == "5m" else 240)
+    start_dt = opened_dt - pad_before
+    end_dt = closed_dt + pad_after
+    candles = []
+    with path.open(encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            try:
+                open_ms = int(float(row.get("open_time") or 0))
+                dt = datetime.fromtimestamp(open_ms / 1000, tz=UTC)
+                if dt < start_dt:
+                    continue
+                if dt > end_dt:
+                    break
+                candles.append({
+                    "t": open_ms,
+                    "o": float(row.get("open") or 0),
+                    "h": float(row.get("high") or 0),
+                    "l": float(row.get("low") or 0),
+                    "c": float(row.get("close") or 0),
+                })
+            except Exception:
+                continue
+    return {"candles": candles[-180:], "interval": interval}
+
+
+def build_trade_detail(order: dict, book: str, state: str):
+    ticker = str(order.get("ticker") or "")
+    opened_at = order.get("opened_at")
+    closed_at = order.get("closed_at")
+    candle_pack = load_trade_candles(ticker, opened_at, closed_at)
+    direction = "short" if book == "short" else "long"
+    strategy_mode = str(order.get("strategy_mode") or ("scalp_short" if book == "short" else "scalp_intradia"))
+    grid_levels = []
+    for level in (order.get("grid_levels") or []):
+        try:
+            grid_levels.append(round(float(level), 6))
+        except Exception:
+            continue
+
+    markers = {
+        "entry_price": order.get("entry_price"),
+        "target_price": order.get("target_price"),
+        "stop_price": order.get("stop_price"),
+        "exit_price": order.get("close_price") or order.get("exit_price"),
+        "grid_levels": grid_levels,
+        "grid_band_index": order.get("grid_band_index"),
+        "range_context": order.get("range_context") or {},
+        "event_points": [
+            {
+                "kind": "buy" if direction == "long" else "sell",
+                "label": "Entrada",
+                "time": opened_at,
+                "price": order.get("entry_price"),
+            },
+            {
+                "kind": "sell" if direction == "long" else "buy",
+                "label": "Salida",
+                "time": closed_at,
+                "price": order.get("close_price") or order.get("exit_price"),
+            },
+        ],
+    }
+    summary = (
+        f"{ticker} · {strategy_mode} · {direction}. "
+        f"Resultado {order.get('result') or state}. "
+        f"Entrada {order.get('entry_price') or '-'} | salida {order.get('close_price') or order.get('exit_price') or '-'} | "
+        f"PnL {order.get('pnl_usd') if order.get('pnl_usd') is not None else order.get('pnl_usd_est') or '-'} USD."
+    )
+    if strategy_mode == "range_lateral" and grid_levels:
+        summary += f" Grid activo con {len(grid_levels)} niveles y banda {order.get('grid_band_index')}"
+
+    return {
+        "ok": True,
+        "ticker": ticker,
+        "book": book,
+        "state": state,
+        "direction": direction,
+        "strategy_mode": strategy_mode,
+        "strategy_reason": order.get("strategy_reason") or "",
+        "result": order.get("result") or state,
+        "entry_price": order.get("entry_price"),
+        "target_price": order.get("target_price"),
+        "stop_price": order.get("stop_price"),
+        "exit_price": order.get("close_price") or order.get("exit_price"),
+        "current_price": order.get("current_price"),
+        "opened_at": opened_at,
+        "closed_at": closed_at,
+        "pnl_usd": order.get("pnl_usd") if order.get("pnl_usd") is not None else order.get("pnl_usd_est"),
+        "notional_usd": order.get("notional_usd"),
+        "interval": candle_pack.get("interval"),
+        "candles": candle_pack.get("candles") or [],
+        "markers": markers,
+        "summary": summary,
+    }
 
 
 def load_journal():
@@ -859,6 +1234,23 @@ def api_analysis(ticker: str):
     })
 
 
+@app.get("/api/crypto-order-detail/{book}/{state}/{order_id}")
+def api_crypto_order_detail(book: str, state: str, order_id: str):
+    book = (book or "long").strip().lower()
+    state = (state or "completed").strip().lower()
+    if book not in {"long", "short"}:
+        raise HTTPException(status_code=400, detail="book invalido")
+    if state not in {"active", "completed"}:
+        raise HTTPException(status_code=400, detail="state invalido")
+
+    order_book = load_crypto_order_book(book)
+    rows = (order_book.get(state) or []) if isinstance(order_book, dict) else []
+    order = next((row for row in rows if str(row.get("id") or "") == str(order_id)), None)
+    if not order:
+        raise HTTPException(status_code=404, detail="orden no encontrada")
+    return JSONResponse(build_trade_detail(order, book, state))
+
+
 @app.post("/tasks/create")
 def create_task(
     title: str = Form(...),
@@ -1189,8 +1581,12 @@ def home(request: Request):
     equity = cash_usd + market_value
     signals = load_signals_snapshot()
     crypto_signals = load_crypto_snapshot()
+    crypto_short_signals = load_crypto_short_snapshot()
     crypto_stream = load_crypto_stream_status()
     learning_status = load_learning_status()
+    learning_status_short = load_learning_status_short()
+    moonshot = load_moonshot_candidates()
+    openclaw_snapshot = load_openclaw_snapshot()
     research_panel = load_research_panel()
     crypto_orders = load_crypto_orders()
     commits = latest_commits()
@@ -1323,24 +1719,31 @@ def home(request: Request):
         except Exception:
             return False
 
-    finnhub_k = os.getenv("FINNHUB_API_KEY", "").strip()
-    fmp_k = os.getenv("FMP_API_KEY", "").strip()
-    av_k = os.getenv("ALPHA_VANTAGE_API_KEY", "").strip() or os.getenv("ALPHAVANTAGE_API_KEY", "").strip()
-    fred_k = os.getenv("FRED_API_KEY", "").strip()
-    news_k = os.getenv("GOOGLE_NEWS_API_KEY", "").strip() or os.getenv("NEWSAPI_KEY", "").strip()
-    cg_k = os.getenv("COINGECKO_API_KEY", "").strip()
+    # --- API PROBE CACHEADO: solo re-probar cada 5 minutos ---
+    import time as _time
+    now_ts = _time.time()
+    if now_ts - _api_probe_cache["last_check"] > _api_probe_cache["ttl_seconds"]:
+        finnhub_k = os.getenv("FINNHUB_API_KEY", "").strip()
+        fmp_k = os.getenv("FMP_API_KEY", "").strip()
+        av_k = os.getenv("ALPHA_VANTAGE_API_KEY", "").strip() or os.getenv("ALPHAVANTAGE_API_KEY", "").strip()
+        fred_k = os.getenv("FRED_API_KEY", "").strip()
+        news_k = os.getenv("GOOGLE_NEWS_API_KEY", "").strip() or os.getenv("NEWSAPI_KEY", "").strip()
+        cg_k = os.getenv("COINGECKO_API_KEY", "").strip()
 
-    api_status = {
-        "FINNHUB": ("OK" if (finnhub_k and api_probe(f"https://finnhub.io/api/v1/quote?symbol=AAPL&token={urllib.parse.quote(finnhub_k)}")) else ("FALTA" if not finnhub_k else "ERROR")),
-        "FMP": ("OK" if (fmp_k and api_probe(f"https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey={urllib.parse.quote(fmp_k)}")) else ("FALTA" if not fmp_k else "ERROR")),
-        "ALPHA_VANTAGE": ("OK" if (av_k and api_probe(f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey={urllib.parse.quote(av_k)}")) else ("FALTA" if not av_k else "ERROR")),
-        "FRED": ("OK" if (fred_k and api_probe(f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={urllib.parse.quote(fred_k)}&file_type=json&limit=1")) else ("FALTA" if not fred_k else "ERROR")),
-        "NEWSAPI": ("OK" if (news_k and api_probe(f"https://newsapi.org/v2/top-headlines?country=us&pageSize=1&apiKey={urllib.parse.quote(news_k)}")) else ("FALTA" if not news_k else "ERROR")),
-        "COINGECKO": ("OK" if api_probe(f"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd{('&x_cg_demo_api_key=' + urllib.parse.quote(cg_k)) if cg_k else ''}") else "ERROR"),
-        "OPENINSIDER": "OK",
-        "YAHOO_OPTIONS": "OK",
-        "FINVIZ": "OK",
-    }
+        _api_probe_cache["status"] = {
+            "FINNHUB": ("OK" if (finnhub_k and api_probe(f"https://finnhub.io/api/v1/quote?symbol=AAPL&token={urllib.parse.quote(finnhub_k)}")) else ("FALTA" if not finnhub_k else "ERROR")),
+            "FMP": ("OK" if (fmp_k and api_probe(f"https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey={urllib.parse.quote(fmp_k)}")) else ("FALTA" if not fmp_k else "ERROR")),
+            "ALPHA_VANTAGE": ("OK" if (av_k and api_probe(f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey={urllib.parse.quote(av_k)}")) else ("FALTA" if not av_k else "ERROR")),
+            "FRED": ("OK" if (fred_k and api_probe(f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={urllib.parse.quote(fred_k)}&file_type=json&limit=1")) else ("FALTA" if not fred_k else "ERROR")),
+            "NEWSAPI": ("OK" if (news_k and api_probe(f"https://newsapi.org/v2/top-headlines?country=us&pageSize=1&apiKey={urllib.parse.quote(news_k)}")) else ("FALTA" if not news_k else "ERROR")),
+            "COINGECKO": ("OK" if api_probe(f"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd{('&x_cg_demo_api_key=' + urllib.parse.quote(cg_k)) if cg_k else ''}") else "ERROR"),
+            "OPENINSIDER": "OK",
+            "YAHOO_OPTIONS": "OK",
+            "FINVIZ": "OK",
+        }
+        _api_probe_cache["last_check"] = now_ts
+
+    api_status = _api_probe_cache["status"]
 
     freshness = signals.get("freshness_min") if isinstance(signals, dict) else None
     stale = (freshness is None) or (freshness > 20)
@@ -1349,16 +1752,41 @@ def home(request: Request):
     # cartera cripto separada
     crypto_active = crypto_orders.get("active", []) or []
     crypto_completed = crypto_orders.get("completed", []) or []
+    crypto_short_orders = _load_json_file(CRYPTO_SHORT_ORDERS_PATH, {"active": [], "completed": [], "daily": {}, "portfolio": {}})
+    crypto_short_active = crypto_short_orders.get("active", []) or []
+    crypto_short_completed = crypto_short_orders.get("completed", []) or []
     crypto_portfolio = crypto_orders.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300})
+    crypto_short_portfolio = crypto_short_orders.get("portfolio", {"capital_initial_usd": 300, "cash_usd": 300, "market_value_usd": 0, "equity_usd": 300})
     active_crypto_tickers = {str(o.get("ticker")) for o in crypto_active if o.get("ticker")}
+    active_crypto_short_tickers = {str(o.get("ticker")) for o in crypto_short_active if o.get("ticker")}
     crypto_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
+    crypto_short_map = {str(a.get("ticker")): float(a.get("price_usd")) for a in (crypto_short_signals.get("assets", []) or []) if a.get("ticker") and a.get("price_usd")}
+    crypto_risk_cfg = load_crypto_risk_config()
+    crypto_short_risk_cfg = load_crypto_short_risk_config()
     crypto_unrealized = 0.0
     crypto_realized = 0.0
+    crypto_short_unrealized = 0.0
+    crypto_short_realized = 0.0
+
+    for c in (crypto_signals.get("top_opportunities", []) or []):
+        if not isinstance(c, dict):
+            continue
+        c.update(explain_crypto_execution_blockers(c, crypto_orders, active_crypto_tickers, crypto_risk_cfg))
+
+    for c in (crypto_short_signals.get("top_opportunities", []) or []):
+        if not isinstance(c, dict):
+            continue
+        c.update(explain_crypto_short_execution_blockers(c, crypto_short_orders, active_crypto_short_tickers, crypto_short_risk_cfg))
 
     # Calculamos PnL realizado
     for c in crypto_completed:
         try:
             crypto_realized += float(c.get("pnl_usd") or 0)
+        except Exception:
+            pass
+    for c in crypto_short_completed:
+        try:
+            crypto_short_realized += float(c.get("pnl_usd") or 0)
         except Exception:
             pass
 
@@ -1380,6 +1808,9 @@ def home(request: Request):
         unified_completed_orders.append({
             "market": "Cripto",
             "ticker": o.get("ticker"),
+            "order_id": o.get("id"),
+            "order_book": "long",
+            "order_state": "completed",
             "entry_price": o.get("entry_price"),
             "exit_price": o.get("close_price") or o.get("exit_price"),
             "result": o.get("result"),
@@ -1407,6 +1838,13 @@ def home(request: Request):
         c_view["closed_at"] = date_iso_to_es(c.get("closed_at"))
         crypto_completed_view.append(c_view)
 
+    crypto_short_completed_view = []
+    for c in crypto_short_completed[::-1]:
+        c_view = dict(c)
+        c_view["opened_at"] = date_iso_to_es(c.get("opened_at"))
+        c_view["closed_at"] = date_iso_to_es(c.get("closed_at"))
+        crypto_short_completed_view.append(c_view)
+
     for o in crypto_active:
         try:
             o["opened_at"] = date_iso_to_es(o.get("opened_at"))
@@ -1416,6 +1854,19 @@ def home(request: Request):
             o["pct_move"] = round(((cp - ep) / ep) * 100, 2)
             o["pnl_usd_est"] = round(cp - ep, 6)
             crypto_unrealized += (cp - ep)
+        except Exception:
+            o["pct_move"] = None
+            o["pnl_usd_est"] = None
+
+    for o in crypto_short_active:
+        try:
+            o["opened_at"] = date_iso_to_es(o.get("opened_at"))
+            ep = float(o.get("entry_price"))
+            cp = float(crypto_short_map.get(o.get("ticker"), ep))
+            o["current_price"] = round(cp, 6)
+            o["pct_move"] = round(((ep - cp) / ep) * 100, 2)
+            o["pnl_usd_est"] = round(((ep - cp) * float(o.get("qty") or 0)), 6)
+            crypto_short_unrealized += float(o["pnl_usd_est"])
         except Exception:
             o["pct_move"] = None
             o["pnl_usd_est"] = None
@@ -1476,17 +1927,29 @@ def home(request: Request):
             "portfolio_equity_live_est": equity_live_est,
             "signals": signals,
             "crypto_signals": crypto_signals,
+            "crypto_short_signals": crypto_short_signals,
             "crypto_stream": crypto_stream,
             "learning_status": learning_status,
+            "learning_status_short": learning_status_short,
+            "moonshot": moonshot,
+            "openclaw_snapshot": openclaw_snapshot,
             "research_panel": research_panel,
             "crypto_orders_active": crypto_active,
             "crypto_orders_completed": crypto_completed_view,
+            "crypto_short_orders_active": crypto_short_active,
+            "crypto_short_orders_completed": crypto_short_completed_view,
             "crypto_daily": crypto_orders.get("daily", {}),
+            "crypto_short_daily": crypto_short_orders.get("daily", {}),
             "crypto_unrealized_usd_est": round(crypto_unrealized, 4),
             "crypto_realized_usd": round(crypto_realized, 4),
+            "crypto_short_unrealized_usd_est": round(crypto_short_unrealized, 4),
+            "crypto_short_realized_usd": round(crypto_short_realized, 4),
             "crypto_equity_reconciled": round(float(crypto_portfolio.get("capital_initial_usd", 0)) + crypto_realized + crypto_unrealized, 4),
             "crypto_portfolio": crypto_portfolio,
+            "crypto_short_equity_reconciled": round(float(crypto_short_portfolio.get("capital_initial_usd", 0)) + crypto_short_realized + crypto_short_unrealized, 4),
+            "crypto_short_portfolio": crypto_short_portfolio,
             "active_crypto_tickers": list(active_crypto_tickers),
+            "active_crypto_short_tickers": list(active_crypto_short_tickers),
             "commits": commits,
             "signals_stale": stale,
             "autopilot_log": autopilot_log,
@@ -1840,6 +2303,27 @@ def control_page():
         return HTMLResponse("Template not found", status_code=500)
     return HTMLResponse(html_path.read_text(encoding="utf-8", errors="replace"))
 # ===== END_CONTROL_PAGE =====
+
+
+# ===== RISK & REGIME API =====
+RISK_METRICS_PATH = Path(os.getenv("RISK_METRICS_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/reports/risk_metrics.json"))
+REGIME_PATH = Path(os.getenv("REGIME_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/market_regime.json"))
+CORRELATION_PATH = Path(os.getenv("CORRELATION_PATH", "C:/Users/Fernando/.openclaw/workspace/proyectos/analisis-mercados/data/correlation_analysis.json"))
+
+
+@app.get("/api/risk-metrics")
+def api_risk_metrics():
+    return JSONResponse(_load_json_file(RISK_METRICS_PATH, {"error": "no risk metrics available"}))
+
+
+@app.get("/api/market-regime")
+def api_market_regime():
+    return JSONResponse(_load_json_file(REGIME_PATH, {"error": "no regime data available"}))
+
+
+@app.get("/api/correlation")
+def api_correlation():
+    return JSONResponse(_load_json_file(CORRELATION_PATH, {"error": "no correlation data available"}))
 
 
 
